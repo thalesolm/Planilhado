@@ -74,8 +74,8 @@ def main():
     # Título com ícones malvadões
     st.markdown("""
     <div style='text-align: center; margin-bottom: 20px;'>
-        <h1 style='color: #FF4B4B; font-size: 3em; margin-bottom: 10px;'>
-            💀🔥🐍👹🔪 Planilhado de Hunts - Carreta Encore 🔪👹🐍🔥💀
+        <h1 style='color: #FF4B4B; font-size: 2.5em; margin-bottom: 10px; white-space: nowrap;'>
+            💀💀💀 Planilhado de Hunts - Carreta Encore 💀💀💀
         </h1>
     </div>
     """, unsafe_allow_html=True)
