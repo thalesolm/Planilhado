@@ -7,8 +7,8 @@ import os
 
 # Configuração da página
 st.set_page_config(
-    page_title="Planilhado",
-    page_icon="📋",
+    page_title="Planilhado de Hunts - Carreta Encore",
+    page_icon="💀",
     layout="wide"
 )
 
@@ -71,7 +71,14 @@ def autenticar(senha_digitada: str) -> bool:
 
 
 def main():
-    st.title("📋 Planilhado de Hunts")
+    # Título com ícones malvadões
+    st.markdown("""
+    <div style='text-align: center; margin-bottom: 20px;'>
+        <h1 style='color: #FF4B4B; font-size: 3em; margin-bottom: 10px;'>
+            💀🔥🐍👹🔪 Planilhado de Hunts - Carreta Encore 🔪👹🐍🔥💀
+        </h1>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     
     # Verificar autenticação
@@ -81,8 +88,8 @@ def main():
     with st.sidebar:
         if not autenticado:
             # Formulário de autenticação
-            st.header("🔐 Acesso de Edição")
-            st.info("💡 Qualquer pessoa pode visualizar o planilhado, mas apenas usuários autorizados podem editar.")
+            st.markdown("### 💀🔐 Acesso de Edição 🔐💀")
+            st.info("🔥 Qualquer pessoa pode visualizar o planilhado, mas apenas usuários autorizados podem editar. 🔥")
             
             senha = st.text_input(
                 "Senha de Administrador",
@@ -91,29 +98,29 @@ def main():
                 placeholder="Digite a senha para editar"
             )
             
-            if st.button("🔓 Entrar", type="primary", use_container_width=True):
+            if st.button("💀🔓 Entrar 🔓💀", type="primary", use_container_width=True):
                 if senha:
                     # Tentar autenticar
                     if autenticar(senha):
-                        st.success("✅ Autenticado com sucesso!")
+                        st.success("💀🔥✅ Autenticado com sucesso! ✅🔥💀")
                         st.rerun()
                     else:
                         # Mostrar mensagem de erro
                         senha_esperada = obter_senha()
-                        st.error("❌ Senha incorreta! Verifique a senha e tente novamente.")
+                        st.error("💀❌ Senha incorreta! Verifique a senha e tente novamente. ❌💀")
                         # Debug apenas em desenvolvimento (comentar em produção)
                         # st.caption(f"Debug: Senha esperada começa com '{senha_esperada[:3]}...' (apenas para debug)")
                 else:
-                    st.warning("⚠️ Por favor, digite a senha.")
+                    st.warning("🔥⚠️ Por favor, digite a senha. ⚠️🔥")
             
             st.markdown("---")
             st.caption("Para visualizar, role a página para baixo 👇")
         else:
             # Formulário de cadastro (apenas se autenticado)
-            st.header("➕ Nova Hunt")
+            st.markdown("### 🔪➕ Nova Hunt ➕🔪")
             
             # Botão de logout
-            if st.button("🚪 Sair", use_container_width=True):
+            if st.button("💀🚪 Sair 🚪💀", use_container_width=True):
                 st.session_state.autenticado = False
                 st.rerun()
             
@@ -140,7 +147,7 @@ def main():
                 respawn = respawn_selecionado
             
             # Timebox
-            st.subheader("Horários")
+            st.markdown("#### 🔥⏰ Horários ⏰🔥")
             horario_inicio = st.time_input(
                 "Horário Inicial",
                 value=time(15, 0),
@@ -153,7 +160,7 @@ def main():
             )
             
             # Integrantes
-            st.subheader("Integrantes da Party")
+            st.markdown("#### 💀👥 Integrantes da Party 👥💀")
             integrante1 = st.text_input("Integrante 1", key="int1")
             integrante2 = st.text_input("Integrante 2", key="int2")
             integrante3 = st.text_input("Integrante 3", key="int3")
@@ -161,10 +168,10 @@ def main():
             integrante5 = st.text_input("Integrante 5", key="int5")
             
             # Botão Salvar
-            if st.button("💾 Salvar Hunt", type="primary", use_container_width=True):
+            if st.button("🔥💀 Salvar Hunt 💀🔥", type="primary", use_container_width=True):
                 # Validar campos obrigatórios
                 if not respawn or not respawn.strip():
-                    st.error("⚠️ Por favor, preencha o campo Respawn.")
+                    st.error("💀⚠️ Por favor, preencha o campo Respawn. ⚠️💀")
                     return
                 
                 # Converter horários para string HH:MM
@@ -176,7 +183,7 @@ def main():
                     horario_inicio_str, horario_fim_str
                 )
                 if not valido:
-                    st.error(f"⚠️ {mensagem_erro}")
+                    st.error(f"💀⚠️ {mensagem_erro} ⚠️💀")
                     return
                 
                 # Verificar overlaps
@@ -184,7 +191,7 @@ def main():
                     respawn.strip(), horario_inicio_str, horario_fim_str
                 )
                 if tem_overlap:
-                    st.error(f"⚠️ {mensagem_overlap}")
+                    st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
                     return
                 
                 # Salvar no banco
@@ -199,19 +206,23 @@ def main():
                         integrante4=integrante4.strip() if integrante4 else None,
                         integrante5=integrante5.strip() if integrante5 else None
                     )
-                    st.success("✅ Hunt salva com sucesso!")
+                    st.success("💀🔥✅ Hunt salva com sucesso! ✅🔥💀")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Erro ao salvar: {str(e)}")
+                    st.error(f"💀❌ Erro ao salvar: {str(e)} ❌💀")
     
     # Área principal - Visualização
-    st.header("📊 Visualização do Planilhado")
+    st.markdown("""
+    <div style='text-align: center; margin: 20px 0;'>
+        <h2>🐍📊 Visualização do Planilhado 📊🐍</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Buscar todas as hunts
     todas_hunts = database.get_all_hunts()
     
     if not todas_hunts:
-        st.info("📝 Nenhuma hunt cadastrada ainda. Use o formulário na barra lateral para adicionar uma nova hunt.")
+        st.info("💀📝 Nenhuma hunt cadastrada ainda. Use o formulário na barra lateral para adicionar uma nova hunt. 📝💀")
     else:
         # Agrupar por respawn
         hunts_por_respawn = visualizations.agrupar_hunts_por_respawn(todas_hunts)
@@ -225,7 +236,7 @@ def main():
             df = visualizations.gerar_quadro_respawn(respawn, hunts)
             
             # Usar expander para cada respawn
-            with st.expander(f"🎯 **{respawn}** ({len(hunts)} hunt{'s' if len(hunts) > 1 else ''})", expanded=True):
+            with st.expander(f"💀🔥 **{respawn}** 🔥💀 ({len(hunts)} hunt{'s' if len(hunts) > 1 else ''})", expanded=True):
                 st.dataframe(
                     df,
                     use_container_width=True,
@@ -235,7 +246,7 @@ def main():
                 # Se autenticado, mostrar opções de deletar
                 if autenticado:
                     st.markdown("---")
-                    st.subheader("🗑️ Deletar Hunts")
+                    st.markdown("### 🔪🗑️ Deletar Hunts 🗑️🔪")
                     
                     # Criar um selectbox com as hunts para deletar
                     opcoes_hunts = []
@@ -262,15 +273,15 @@ def main():
                         
                         col1, col2 = st.columns([1, 4])
                         with col1:
-                            if st.button("🗑️ Deletar", type="secondary", key=f"delete_btn_{respawn}"):
+                            if st.button("💀🗑️ Deletar 🗑️💀", type="secondary", key=f"delete_btn_{respawn}"):
                                 hunt_id_para_deletar = hunt_selecionada[0]
                                 if database.delete_hunt(hunt_id_para_deletar):
-                                    st.success(f"✅ Hunt ID {hunt_id_para_deletar} deletada com sucesso!")
+                                    st.success(f"💀🔥✅ Hunt ID {hunt_id_para_deletar} deletada com sucesso! ✅🔥💀")
                                     st.rerun()
                                 else:
-                                    st.error(f"❌ Erro ao deletar hunt ID {hunt_id_para_deletar}")
+                                    st.error(f"💀❌ Erro ao deletar hunt ID {hunt_id_para_deletar} ❌💀")
                         with col2:
-                            st.caption("⚠️ Esta ação não pode ser desfeita!")
+                            st.caption("🔥⚠️ Esta ação não pode ser desfeita! ⚠️🔥")
 
 
 if __name__ == "__main__":
