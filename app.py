@@ -70,6 +70,188 @@ def autenticar(senha_digitada: str) -> bool:
     return False
 
 
+def mostrar_requisicao_interface():
+    """Interface para usuários fazerem requisições de horários."""
+    st.markdown("### 🔥📝 Solicitar Horário 📝🔥")
+    st.info("💀 Preencha os dados abaixo para solicitar um horário. O administrador irá revisar sua solicitação. 💀")
+    
+    # Botão para voltar
+    if st.button("← Voltar", key="voltar_requisicao"):
+        st.session_state['mostrar_requisicao'] = False
+        st.rerun()
+    
+    st.markdown("---")
+    
+    # Buscar respawns existentes
+    respawns_existentes = database.get_respawns()
+    
+    # Campo Respawn com autocomplete
+    opcoes_respawn = ["Novo respawn"] + respawns_existentes
+    respawn_selecionado = st.selectbox(
+        "Respawn",
+        options=opcoes_respawn,
+        key="req_respawn_select"
+    )
+    
+    if respawn_selecionado == "Novo respawn":
+        respawn = st.text_input(
+            "Digite o nome do novo respawn",
+            key="req_respawn_new",
+            placeholder="Ex: Livraria de Energy"
+        )
+    else:
+        respawn = respawn_selecionado
+    
+    # Timebox
+    st.markdown("#### 🔥⏰ Horários ⏰🔥")
+    horario_inicio = st.time_input(
+        "Horário Inicial",
+        value=time(15, 0),
+        key="req_horario_inicio"
+    )
+    horario_fim = st.time_input(
+        "Horário Final",
+        value=time(18, 0),
+        key="req_horario_fim"
+    )
+    
+    # Integrantes
+    st.markdown("#### 💀👥 Integrantes da Party 👥💀")
+    integrante1 = st.text_input("Integrante 1", key="req_int1")
+    integrante2 = st.text_input("Integrante 2", key="req_int2")
+    integrante3 = st.text_input("Integrante 3", key="req_int3")
+    integrante4 = st.text_input("Integrante 4", key="req_int4")
+    integrante5 = st.text_input("Integrante 5", key="req_int5")
+    
+    # Botão Submeter
+    if st.button("🔥💀 Submeter Requisição 💀🔥", type="primary", use_container_width=True):
+        # Validar campos obrigatórios
+        if not respawn or not respawn.strip():
+            st.error("💀⚠️ Por favor, preencha o campo Respawn. ⚠️💀")
+            return
+        
+        # Converter horários para string HH:MM
+        horario_inicio_str = horario_inicio.strftime("%H:%M")
+        horario_fim_str = horario_fim.strftime("%H:%M")
+        
+        # Validar horários
+        valido, mensagem_erro = validators.validar_horarios(
+            horario_inicio_str, horario_fim_str
+        )
+        if not valido:
+            st.error(f"💀⚠️ {mensagem_erro} ⚠️💀")
+            return
+        
+        # Verificar overlaps (incluindo requisições pendentes)
+        tem_overlap, mensagem_overlap = validators.verificar_overlap(
+            respawn.strip(), horario_inicio_str, horario_fim_str,
+            verificar_requisicoes=True
+        )
+        if tem_overlap:
+            st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
+            return
+        
+        # Salvar requisição
+        try:
+            database.insert_requisicao(
+                respawn=respawn.strip(),
+                horario_inicio=horario_inicio_str,
+                horario_fim=horario_fim_str,
+                integrante1=integrante1.strip() if integrante1 else None,
+                integrante2=integrante2.strip() if integrante2 else None,
+                integrante3=integrante3.strip() if integrante3 else None,
+                integrante4=integrante4.strip() if integrante4 else None,
+                integrante5=integrante5.strip() if integrante5 else None
+            )
+            st.success("💀🔥✅ Requisição enviada com sucesso! Aguarde aprovação do administrador. ✅🔥💀")
+            st.session_state['mostrar_requisicao'] = False
+            st.rerun()
+        except Exception as e:
+            st.error(f"💀❌ Erro ao enviar requisição: {str(e)} ❌💀")
+
+
+def mostrar_aprovacao_requisicoes():
+    """Interface para admin aprovar/rejeitar requisições."""
+    requisicoes = database.get_all_requisicoes()
+    count_pendentes = len(requisicoes)
+    
+    # Badge com contador de requisições pendentes
+    if count_pendentes > 0:
+        st.markdown(f"""
+        <div style='background-color: #FF4B4B; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: center;'>
+            <h3>💀🔥 {count_pendentes} Requisição(ões) Pendente(s) 🔥💀</h3>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if not requisicoes:
+        st.info("💀✅ Nenhuma requisição pendente no momento. ✅💀")
+        st.markdown("---")
+        return
+    
+    st.markdown("### 💀⚖️ Requisições Pendentes ⚖️💀")
+    
+    for req in requisicoes:
+        # req = (id, respawn, horario_inicio, horario_fim, integrante1, ..., integrante5, data_requisicao)
+        req_id = req[0]
+        respawn = req[1]
+        horario_inicio = req[2]
+        horario_fim = req[3]
+        
+        integrantes = []
+        for i in range(4, 9):
+            if req[i] and req[i].strip():
+                integrantes.append(req[i].strip())
+        integrantes_str = ", ".join(integrantes) if integrantes else "Sem integrantes"
+        
+        with st.expander(f"💀 {respawn} - {horario_inicio} às {horario_fim} ({integrantes_str})", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            st.write(f"**Respawn:** {respawn}")
+            st.write(f"**Horário:** {horario_inicio} - {horario_fim}")
+            st.write(f"**Integrantes:** {integrantes_str}")
+            st.write(f"**Data da Requisição:** {req[9]}")
+            
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                if st.button(f"✅ Aceitar", key=f"accept_{req_id}", type="primary", use_container_width=True):
+                    # Verificar overlap antes de aceitar
+                    tem_overlap, mensagem_overlap = validators.verificar_overlap(
+                        respawn, horario_inicio, horario_fim,
+                        verificar_requisicoes=False  # Não verificar outras requisições
+                    )
+                    
+                    if tem_overlap:
+                        st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
+                    else:
+                        # Mover para hunts
+                        database.insert_hunt(
+                            respawn=respawn,
+                            horario_inicio=horario_inicio,
+                            horario_fim=horario_fim,
+                            integrante1=req[4] if len(req) > 4 else None,
+                            integrante2=req[5] if len(req) > 5 else None,
+                            integrante3=req[6] if len(req) > 6 else None,
+                            integrante4=req[7] if len(req) > 7 else None,
+                            integrante5=req[8] if len(req) > 8 else None
+                        )
+                        # Deletar requisição
+                        database.delete_requisicao(req_id)
+                        st.success(f"💀🔥✅ Requisição ID {req_id} aceita e adicionada ao planilhado! ✅🔥💀")
+                        st.rerun()
+            
+            with col2:
+                if st.button(f"❌ Rejeitar", key=f"reject_{req_id}", type="secondary", use_container_width=True):
+                    database.delete_requisicao(req_id)
+                    st.success(f"💀❌ Requisição ID {req_id} rejeitada e removida. ❌💀")
+                    st.rerun()
+            
+            with col3:
+                st.caption("⚠️ Verifique overlaps antes de aceitar!")
+        
+        st.markdown("---")
+
+
 def main():
     # Título com ícones malvadões
     st.markdown("""
@@ -114,10 +296,29 @@ def main():
                     st.warning("🔥⚠️ Por favor, digite a senha. ⚠️🔥")
             
             st.markdown("---")
+            
+            # Botão para fazer requisição
+            st.markdown("### 🔥📝 Fazer Requisição 📝🔥")
+            st.info("💀 Solicite um horário para ser aprovado pelo administrador. 💀")
+            
+            if st.button("💀📋 Solicitar Horário 📋💀", use_container_width=True, key="btn_requisicao"):
+                st.session_state['mostrar_requisicao'] = True
+                st.rerun()
+            
+            st.markdown("---")
             st.caption("Para visualizar, role a página para baixo 👇")
         else:
             # Formulário de cadastro (apenas se autenticado)
             st.markdown("### 🔪➕ Nova Hunt ➕🔪")
+            
+            # Contador de requisições pendentes
+            count_requisicoes = database.count_requisicoes_pendentes()
+            if count_requisicoes > 0:
+                st.markdown(f"""
+                <div style='background-color: #FF4B4B; color: white; padding: 8px; border-radius: 5px; margin-bottom: 10px; text-align: center; font-weight: bold;'>
+                    💀🔥 {count_requisicoes} Requisição(ões) Pendente(s) 🔥💀
+                </div>
+                """, unsafe_allow_html=True)
             
             # Botão de logout
             if st.button("💀🚪 Sair 🚪💀", use_container_width=True):
@@ -210,6 +411,15 @@ def main():
                     st.rerun()
                 except Exception as e:
                     st.error(f"💀❌ Erro ao salvar: {str(e)} ❌💀")
+    
+    # Verificar se deve mostrar interface de requisição
+    if not autenticado and st.session_state.get('mostrar_requisicao', False):
+        mostrar_requisicao_interface()
+        return
+    
+    # Se autenticado, mostrar tela de aprovação de requisições
+    if autenticado:
+        mostrar_aprovacao_requisicoes()
     
     # Área principal - Visualização
     st.markdown("""

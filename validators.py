@@ -1,9 +1,10 @@
 from typing import Optional, Tuple
-from database import get_hunts_by_respawn_for_validation
+from database import get_hunts_by_respawn_for_validation, get_requisicoes_by_respawn_for_validation
 
 
 def verificar_overlap(respawn: str, horario_inicio: str, horario_fim: str, 
-                     exclude_id: Optional[int] = None) -> Tuple[bool, Optional[str]]:
+                     exclude_id: Optional[int] = None, 
+                     verificar_requisicoes: bool = True) -> Tuple[bool, Optional[str]]:
     """
     Verifica se há overlap de horário para um respawn específico.
     
@@ -11,7 +12,8 @@ def verificar_overlap(respawn: str, horario_inicio: str, horario_fim: str,
         respawn: Nome do respawn
         horario_inicio: Horário de início no formato HH:MM
         horario_fim: Horário de fim no formato HH:MM
-        exclude_id: ID de uma hunt a ser excluída da verificação (útil para edição)
+        exclude_id: ID de uma hunt/requisição a ser excluída da verificação (útil para edição)
+        verificar_requisicoes: Se True, também verifica overlaps com requisições pendentes
     
     Returns:
         Tupla (tem_overlap, mensagem_erro)
@@ -33,6 +35,18 @@ def verificar_overlap(respawn: str, horario_inicio: str, horario_fim: str,
         if inicio_minutos < h_fim_min and fim_minutos > h_inicio_min:
             mensagem = f"Conflito de horário! Já existe uma hunt cadastrada das {h_inicio} às {h_fim}."
             return True, mensagem
+    
+    # Verificar overlap com requisições pendentes (se solicitado)
+    if verificar_requisicoes:
+        requisicoes_existentes = get_requisicoes_by_respawn_for_validation(respawn, exclude_id)
+        
+        for req_id, h_inicio, h_fim in requisicoes_existentes:
+            h_inicio_min = _horario_para_minutos(h_inicio)
+            h_fim_min = _horario_para_minutos(h_fim)
+            
+            if inicio_minutos < h_fim_min and fim_minutos > h_inicio_min:
+                mensagem = f"Conflito de horário! Já existe uma requisição pendente das {h_inicio} às {h_fim}."
+                return True, mensagem
     
     return False, None
 
