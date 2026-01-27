@@ -26,11 +26,17 @@ def verificar_autenticacao():
 
 def obter_senha():
     """Obtém a senha de autenticação dos secrets ou variável de ambiente."""
-    # Tentar obter do secrets do Streamlit (funciona no Cloud)
+    # Tentar obter do secrets do Streamlit (arquivo .streamlit/secrets.toml ou Cloud)
     try:
-        if hasattr(st, 'secrets') and 'SENHA_ADMIN' in st.secrets:
-            return st.secrets['SENHA_ADMIN']
-    except:
+        if hasattr(st, 'secrets'):
+            # Tentar acessar como dicionário
+            if isinstance(st.secrets, dict) and 'SENHA_ADMIN' in st.secrets:
+                return st.secrets['SENHA_ADMIN']
+            # Tentar acessar como atributo
+            elif hasattr(st.secrets, 'SENHA_ADMIN'):
+                return st.secrets.SENHA_ADMIN
+    except Exception as e:
+        # Se houver erro, continuar para outros métodos
         pass
     
     # Fallback para variável de ambiente (desenvolvimento local)
@@ -44,8 +50,15 @@ def obter_senha():
 
 def autenticar(senha_digitada: str) -> bool:
     """Verifica se a senha digitada está correta."""
+    if not senha_digitada:
+        return False
+    
     senha_correta = obter_senha()
-    if senha_correta and senha_digitada == senha_correta:
+    if not senha_correta:
+        return False
+    
+    # Comparar senhas (removendo espaços em branco)
+    if senha_digitada.strip() == str(senha_correta).strip():
         st.session_state.autenticado = True
         return True
     return False
