@@ -8,6 +8,8 @@ Aplicativo web simples para controle de planilhado de hunts, desenvolvido com St
 - **Autocomplete de Respawns**: Sugestão automática de respawns já cadastrados
 - **Validação de Overlaps**: Impede cadastros com conflito de horário no mesmo respawn
 - **Visualização por Respawn**: Quadros organizados mostrando todas as hunts agrupadas por respawn
+- **Controle de Acesso**: Visualização pública, mas edição protegida por senha
+- **Dark Mode**: Interface com tema escuro
 - **Banco de Dados SQLite**: Fácil acesso e edição manual do arquivo `data/planilhado.db`
 
 ## 🚀 Como Executar Localmente
@@ -30,7 +32,15 @@ cd Planilhado
 pip install -r requirements.txt
 ```
 
-3. Execute o aplicativo:
+3. Configure a senha de administrador (opcional):
+   - Para desenvolvimento local, você pode usar a senha padrão `admin123` ou
+   - Criar um arquivo `.streamlit/secrets.toml` com:
+     ```toml
+     SENHA_ADMIN = "sua_senha_segura_aqui"
+     ```
+   - Ou definir uma variável de ambiente: `export SENHA_ADMIN="sua_senha"`
+
+4. Execute o aplicativo:
 ```bash
 streamlit run app.py
 ```
@@ -56,7 +66,15 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
    - O arquivo principal deve ser `app.py`
    - Clique em "Deploy!"
 
-4. **Aguarde o deploy**
+4. **Configure a senha de administrador**
+   - Após criar o app, vá em "Settings" → "Secrets"
+   - Adicione a seguinte configuração:
+     ```toml
+     SENHA_ADMIN = "sua_senha_segura_aqui"
+     ```
+   - Salve e o app será reiniciado automaticamente
+
+5. **Aguarde o deploy**
    - O Streamlit Cloud irá instalar as dependências do `requirements.txt`
    - O banco de dados SQLite será criado automaticamente na pasta `data/`
    - O app estará disponível em uma URL como: `https://planilhado.streamlit.app`
@@ -67,19 +85,30 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
 - ✅ O arquivo `app.py` é o ponto de entrada do aplicativo
 - ✅ A pasta `data/` será criada automaticamente quando o app rodar
 - ✅ O banco de dados SQLite será persistente entre sessões no cloud
+- ✅ **Configure a senha de administrador nos Secrets do Streamlit Cloud**
 
 ## 📝 Como Usar
 
+### Controle de Acesso
+
+- **Visualização**: Qualquer pessoa que acessar o link pode visualizar o planilhado
+- **Edição**: Apenas usuários autenticados podem adicionar novas hunts
+- Para editar, é necessário inserir a senha de administrador na barra lateral
+
 ### Cadastrar uma Nova Hunt
 
-1. No formulário na barra lateral:
+1. **Autentique-se** (se ainda não estiver):
+   - Na barra lateral, digite a senha de administrador
+   - Clique em "Entrar"
+
+2. No formulário na barra lateral:
    - **Respawn**: Selecione um respawn existente ou escolha "Novo respawn" para digitar um novo
    - **Horários**: Defina o horário inicial e final da hunt
    - **Integrantes**: Preencha os nomes dos integrantes (campos opcionais)
    
-2. Clique em "Salvar Hunt"
+3. Clique em "Salvar Hunt"
 
-3. O sistema irá:
+4. O sistema irá:
    - Validar se o horário final é maior que o inicial
    - Verificar se há conflito de horário com outras hunts do mesmo respawn
    - Salvar a hunt se tudo estiver válido
@@ -125,7 +154,8 @@ Planilhado/
 ├── visualizations.py      # Funções para gerar os quadros de visualização
 ├── requirements.txt       # Dependências do projeto
 ├── .streamlit/
-│   └── config.toml        # Configurações do Streamlit
+│   ├── config.toml        # Configurações do Streamlit (tema dark)
+│   └── secrets.toml.example  # Exemplo de arquivo de secrets
 ├── data/
 │   └── planilhado.db      # Banco de dados SQLite (criado automaticamente)
 └── README.md              # Este arquivo
