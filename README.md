@@ -33,14 +33,14 @@ pip install -r requirements.txt
 ```
 
 3. Configure a senha de administrador:
-   - **Opção 1 (Recomendado)**: Criar um arquivo `.streamlit/secrets.toml` com:
+   - **Opção 1 (Recomendado)**: Criar um arquivo `.streamlit/secrets.toml` (este arquivo está no `.gitignore` e NÃO será commitado):
      ```toml
-     SENHA_ADMIN = "quemhackearegay666"
+     SENHA_ADMIN = "sua_senha_segura_aqui"
      ```
    - **Opção 2**: Definir uma variável de ambiente:
-     - Windows (PowerShell): `$env:SENHA_ADMIN="quemhackearegay666"`
-     - Linux/Mac: `export SENHA_ADMIN="quemhackearegay666"`
-   - **Nota**: Se nenhuma das opções acima for configurada, a senha padrão será `quemhackearegay666`
+     - Windows (PowerShell): `$env:SENHA_ADMIN="sua_senha_segura_aqui"`
+     - Linux/Mac: `export SENHA_ADMIN="sua_senha_segura_aqui"`
+   - **Importante**: O arquivo `secrets.toml` está no `.gitignore` e nunca será commitado no repositório público
 
 4. Execute o aplicativo:
 ```bash
@@ -70,12 +70,14 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
 
 4. **Configure a senha de administrador (OBRIGATÓRIO)**
    - Após criar o app, vá em "⚙️ Settings" (ícone de engrenagem) → "Secrets"
-   - No campo de texto, adicione EXATAMENTE:
+   - No campo de texto, adicione:
      ```toml
-     SENHA_ADMIN = "quemhackearegay666"
+     SENHA_ADMIN = "sua_senha_segura_aqui"
      ```
-   - **IMPORTANTE**: No Streamlit Cloud, o arquivo `.streamlit/secrets.toml` local NÃO é usado!
-   - Você DEVE configurar os secrets através da interface web do Streamlit Cloud
+   - **IMPORTANTE**: 
+     - No Streamlit Cloud, o arquivo `.streamlit/secrets.toml` local NÃO é usado!
+     - Você DEVE configurar os secrets através da interface web do Streamlit Cloud
+     - A senha configurada aqui é PRIVADA e não aparece no código do repositório
    - Salve e o app será reiniciado automaticamente
    - Após salvar, aguarde alguns segundos e tente fazer login novamente
 
