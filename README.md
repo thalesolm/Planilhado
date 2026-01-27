@@ -32,13 +32,15 @@ cd Planilhado
 pip install -r requirements.txt
 ```
 
-3. Configure a senha de administrador (opcional):
-   - Para desenvolvimento local, você pode usar a senha padrão `admin123` ou
-   - Criar um arquivo `.streamlit/secrets.toml` com:
+3. Configure a senha de administrador:
+   - **Opção 1 (Recomendado)**: Criar um arquivo `.streamlit/secrets.toml` com:
      ```toml
-     SENHA_ADMIN = "sua_senha_segura_aqui"
+     SENHA_ADMIN = "quemhackearegay666"
      ```
-   - Ou definir uma variável de ambiente: `export SENHA_ADMIN="sua_senha"`
+   - **Opção 2**: Definir uma variável de ambiente:
+     - Windows (PowerShell): `$env:SENHA_ADMIN="quemhackearegay666"`
+     - Linux/Mac: `export SENHA_ADMIN="quemhackearegay666"`
+   - **Nota**: Se nenhuma das opções acima for configurada, a senha padrão será `quemhackearegay666`
 
 4. Execute o aplicativo:
 ```bash
@@ -66,13 +68,16 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
    - O arquivo principal deve ser `app.py`
    - Clique em "Deploy!"
 
-4. **Configure a senha de administrador**
-   - Após criar o app, vá em "Settings" → "Secrets"
-   - Adicione a seguinte configuração:
+4. **Configure a senha de administrador (OBRIGATÓRIO)**
+   - Após criar o app, vá em "⚙️ Settings" (ícone de engrenagem) → "Secrets"
+   - No campo de texto, adicione EXATAMENTE:
      ```toml
-     SENHA_ADMIN = "sua_senha_segura_aqui"
+     SENHA_ADMIN = "quemhackearegay666"
      ```
+   - **IMPORTANTE**: No Streamlit Cloud, o arquivo `.streamlit/secrets.toml` local NÃO é usado!
+   - Você DEVE configurar os secrets através da interface web do Streamlit Cloud
    - Salve e o app será reiniciado automaticamente
+   - Após salvar, aguarde alguns segundos e tente fazer login novamente
 
 5. **Aguarde o deploy**
    - O Streamlit Cloud irá instalar as dependências do `requirements.txt`

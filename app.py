@@ -26,26 +26,28 @@ def verificar_autenticacao():
 
 def obter_senha():
     """Obtém a senha de autenticação dos secrets ou variável de ambiente."""
-    # Tentar obter do secrets do Streamlit (arquivo .streamlit/secrets.toml ou Cloud)
+    # Prioridade 1: Secrets do Streamlit (Cloud ou arquivo local .streamlit/secrets.toml)
     try:
-        if hasattr(st, 'secrets'):
-            # Tentar acessar como dicionário
-            if isinstance(st.secrets, dict) and 'SENHA_ADMIN' in st.secrets:
-                return st.secrets['SENHA_ADMIN']
-            # Tentar acessar como atributo
-            elif hasattr(st.secrets, 'SENHA_ADMIN'):
-                return st.secrets.SENHA_ADMIN
-    except Exception as e:
-        # Se houver erro, continuar para outros métodos
-        pass
+        # No Streamlit, st.secrets funciona como objeto com atributos
+        senha = st.secrets.get("SENHA_ADMIN", None)
+        if senha:
+            return str(senha).strip()
+    except:
+        try:
+            # Tentar acessar diretamente como atributo
+            senha = st.secrets.SENHA_ADMIN
+            if senha:
+                return str(senha).strip()
+        except:
+            pass
     
-    # Fallback para variável de ambiente (desenvolvimento local)
+    # Prioridade 2: Variável de ambiente
     senha_env = os.environ.get("SENHA_ADMIN")
     if senha_env:
-        return senha_env
+        return str(senha_env).strip()
     
-    # Senha padrão para desenvolvimento (apenas se nenhuma outra estiver configurada)
-    return "admin123"
+    # Prioridade 3: Senha padrão (fallback)
+    return "quemhackearegay666"
 
 
 def autenticar(senha_digitada: str) -> bool:
@@ -57,8 +59,12 @@ def autenticar(senha_digitada: str) -> bool:
     if not senha_correta:
         return False
     
-    # Comparar senhas (removendo espaços em branco)
-    if senha_digitada.strip() == str(senha_correta).strip():
+    # Normalizar senhas (remover espaços e converter para string)
+    senha_digitada_normalizada = str(senha_digitada).strip()
+    senha_correta_normalizada = str(senha_correta).strip()
+    
+    # Comparar senhas
+    if senha_digitada_normalizada == senha_correta_normalizada:
         st.session_state.autenticado = True
         return True
     return False
@@ -86,11 +92,19 @@ def main():
             )
             
             if st.button("🔓 Entrar", type="primary", use_container_width=True):
-                if autenticar(senha):
-                    st.success("✅ Autenticado com sucesso!")
-                    st.rerun()
+                if senha:
+                    # Tentar autenticar
+                    if autenticar(senha):
+                        st.success("✅ Autenticado com sucesso!")
+                        st.rerun()
+                    else:
+                        # Mostrar mensagem de erro
+                        senha_esperada = obter_senha()
+                        st.error("❌ Senha incorreta! Verifique a senha e tente novamente.")
+                        # Debug apenas em desenvolvimento (comentar em produção)
+                        # st.caption(f"Debug: Senha esperada começa com '{senha_esperada[:3]}...' (apenas para debug)")
                 else:
-                    st.error("❌ Senha incorreta!")
+                    st.warning("⚠️ Por favor, digite a senha.")
             
             st.markdown("---")
             st.caption("Para visualizar, role a página para baixo 👇")
@@ -217,6 +231,46 @@ def main():
                     use_container_width=True,
                     hide_index=True
                 )
+                
+                # Se autenticado, mostrar opções de deletar
+                if autenticado:
+                    st.markdown("---")
+                    st.subheader("🗑️ Deletar Hunts")
+                    
+                    # Criar um selectbox com as hunts para deletar
+                    opcoes_hunts = []
+                    for hunt in hunts:
+                        # hunt = (id, respawn, horario_inicio, horario_fim, integrante1, ..., integrante5, data_cadastro)
+                        hunt_id = hunt[0]
+                        horario_inicio = hunt[2]
+                        horario_fim = hunt[3]
+                        integrantes = []
+                        for i in range(4, 9):
+                            if hunt[i] and hunt[i].strip():
+                                integrantes.append(hunt[i].strip())
+                        integrantes_str = ", ".join(integrantes) if integrantes else "Sem integrantes"
+                        label = f"ID {hunt_id}: {horario_inicio} - {horario_fim} ({integrantes_str})"
+                        opcoes_hunts.append((hunt_id, label))
+                    
+                    if opcoes_hunts:
+                        hunt_selecionada = st.selectbox(
+                            "Selecione a hunt para deletar:",
+                            options=opcoes_hunts,
+                            format_func=lambda x: x[1],
+                            key=f"delete_select_{respawn}"
+                        )
+                        
+                        col1, col2 = st.columns([1, 4])
+                        with col1:
+                            if st.button("🗑️ Deletar", type="secondary", key=f"delete_btn_{respawn}"):
+                                hunt_id_para_deletar = hunt_selecionada[0]
+                                if database.delete_hunt(hunt_id_para_deletar):
+                                    st.success(f"✅ Hunt ID {hunt_id_para_deletar} deletada com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Erro ao deletar hunt ID {hunt_id_para_deletar}")
+                        with col2:
+                            st.caption("⚠️ Esta ação não pode ser desfeita!")
 
 
 if __name__ == "__main__":
