@@ -17,16 +17,30 @@ _engine = None
 
 def _get_database_url() -> Optional[str]:
     """Obtém DATABASE_URL dos secrets do Streamlit ou variável de ambiente."""
+    # 1) Secrets do Streamlit (Cloud ou .streamlit/secrets.toml)
     try:
         import streamlit as st
-        url = st.secrets.get("DATABASE_URL", None)
-        if url:
-            return str(url).strip()
-        if hasattr(st.secrets, "DATABASE_URL"):
-            return str(st.secrets.DATABASE_URL).strip()
+        if hasattr(st, "secrets") and st.secrets is not None:
+            # Acesso por atributo (comum no Streamlit Cloud)
+            if hasattr(st.secrets, "DATABASE_URL"):
+                url = st.secrets.DATABASE_URL
+                if url:
+                    return str(url).strip()
+            # Acesso por chave
+            if "DATABASE_URL" in st.secrets:
+                url = st.secrets["DATABASE_URL"]
+                if url:
+                    return str(url).strip()
+            # Acesso por .get() se existir
+            if hasattr(st.secrets, "get"):
+                url = st.secrets.get("DATABASE_URL")
+                if url:
+                    return str(url).strip()
     except Exception:
         pass
-    return os.environ.get("DATABASE_URL", "").strip() or None
+    # 2) Variável de ambiente
+    url = os.environ.get("DATABASE_URL", "").strip()
+    return url if url else None
 
 
 def get_engine():
@@ -46,6 +60,19 @@ def get_engine():
         _engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
 
     return _engine
+
+
+def get_connection_status() -> str:
+    """Retorna uma string indicando qual banco está em uso (para debug/confirmação)."""
+    try:
+        engine = get_engine()
+        url_str = str(engine.url)
+        if "postgresql" in url_str or "postgres" in url_str:
+            # Não expor a URL completa por segurança
+            return "PostgreSQL (nuvem)"
+        return "SQLite (local)"
+    except Exception as e:
+        return f"Erro: {e}"
 
 
 def init_db():

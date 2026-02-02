@@ -12,9 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicializar banco de dados
-database.init_db()
-
 
 def verificar_autenticacao():
     """Verifica se o usuário está autenticado. Retorna True se autenticado."""
@@ -253,6 +250,19 @@ def mostrar_aprovacao_requisicoes():
 
 
 def main():
+    # Inicializar banco de dados (dentro do contexto Streamlit para garantir que secrets estejam disponíveis)
+    try:
+        database.init_db()
+        status = database.get_connection_status()
+    except Exception as e:
+        st.error(f"💀 Erro ao conectar no banco de dados: {str(e)}")
+        st.info("Verifique se DATABASE_URL está configurada nos Secrets (Streamlit Cloud) ou use SQLite local.")
+        st.stop()
+
+    # Indicador de banco (confirma que a conexão foi executada)
+    with st.sidebar:
+        st.caption(f"🗄️ Banco: {status}")
+
     # Título com ícones malvadões
     st.markdown("""
     <div style='text-align: center; margin-bottom: 20px;'>
