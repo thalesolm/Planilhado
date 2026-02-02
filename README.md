@@ -10,7 +10,7 @@ Aplicativo web simples para controle de planilhado de hunts, desenvolvido com St
 - **Visualização por Respawn**: Quadros organizados mostrando todas as hunts agrupadas por respawn
 - **Controle de Acesso**: Visualização pública, mas edição protegida por senha
 - **Dark Mode**: Interface com tema escuro
-- **Banco de Dados SQLite**: Fácil acesso e edição manual do arquivo `data/planilhado.db`
+- **Banco de Dados**: SQLite local ou PostgreSQL na nuvem (persistente no Streamlit Cloud)
 
 ## 🚀 Como Executar Localmente
 
@@ -81,18 +81,27 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
    - Salve e o app será reiniciado automaticamente
    - Após salvar, aguarde alguns segundos e tente fazer login novamente
 
-5. **Aguarde o deploy**
+5. **Configure um banco de dados persistente (RECOMENDADO)**
+   - Sem isso, quando o app "dormir" no Streamlit Cloud, **todos os dados são perdidos** (SQLite local é efêmero).
+   - Crie um banco PostgreSQL gratuito em [Neon](https://neon.tech) ou [Supabase](https://supabase.com).
+   - Copie a **connection string** (URL) do banco e adicione nos Secrets:
+     ```toml
+     DATABASE_URL = "postgresql://usuario:senha@host:5432/nome_do_banco"
+     ```
+   - Exemplo Neon: `postgresql://usuario:senha@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
+   - Exemplo Supabase: em Project Settings → Database → Connection string (URI).
+   - Com `DATABASE_URL` configurada, os dados permanecem mesmo quando o app dormir.
+
+6. **Aguarde o deploy**
    - O Streamlit Cloud irá instalar as dependências do `requirements.txt`
-   - O banco de dados SQLite será criado automaticamente na pasta `data/`
    - O app estará disponível em uma URL como: `https://planilhado.streamlit.app`
 
 ### Importante para o Deploy
 
 - ✅ O arquivo `requirements.txt` está configurado corretamente
 - ✅ O arquivo `app.py` é o ponto de entrada do aplicativo
-- ✅ A pasta `data/` será criada automaticamente quando o app rodar
-- ✅ O banco de dados SQLite será persistente entre sessões no cloud
 - ✅ **Configure a senha de administrador nos Secrets do Streamlit Cloud**
+- ✅ **Configure `DATABASE_URL` (PostgreSQL) nos Secrets para os dados não sumirem quando o app dormir**
 
 ## 📝 Como Usar
 
@@ -131,7 +140,8 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
 
 ## 🗄️ Banco de Dados
 
-O banco de dados SQLite está localizado em `data/planilhado.db`.
+- **Local (desenvolvimento)**: SQLite em `data/planilhado.db`. Não configure `DATABASE_URL`.
+- **Streamlit Cloud (produção)**: Configure `DATABASE_URL` nos Secrets com uma URL PostgreSQL (ex.: Neon ou Supabase) para os dados persistirem quando o app dormir.
 
 ### Estrutura da Tabela `hunts`
 
@@ -144,10 +154,8 @@ O banco de dados SQLite está localizado em `data/planilhado.db`.
 
 ### Edição Manual
 
-Você pode editar o banco de dados manualmente usando:
-- **DB Browser for SQLite** (recomendado): [sqlitebrowser.org](https://sqlitebrowser.org/)
-- **SQLite CLI**: Ferramenta de linha de comando
-- Qualquer outro cliente SQLite
+- **SQLite (local)**: Use [DB Browser for SQLite](https://sqlitebrowser.org/) ou SQLite CLI no arquivo `data/planilhado.db`.
+- **PostgreSQL (Cloud)**: Use o painel do provedor (Neon, Supabase) ou ferramentas como pgAdmin, DBeaver.
 
 ⚠️ **Atenção**: Faça backup antes de editar manualmente!
 
@@ -156,7 +164,7 @@ Você pode editar o banco de dados manualmente usando:
 ```
 Planilhado/
 ├── app.py                 # Aplicativo principal Streamlit
-├── database.py            # Funções de banco de dados (SQLite)
+├── database.py            # Funções de banco (SQLite local / PostgreSQL Cloud)
 ├── validators.py          # Validação de overlaps e regras de negócio
 ├── visualizations.py      # Funções para gerar os quadros de visualização
 ├── requirements.txt       # Dependências do projeto
@@ -172,11 +180,14 @@ Planilhado/
 
 - `streamlit>=1.28.0`: Framework web para a interface
 - `pandas>=2.0.0`: Manipulação de dados e visualizações
+- `sqlalchemy>=2.0.0`: Abstração de banco (SQLite e PostgreSQL)
+- `psycopg2-binary>=2.9.6`: Driver PostgreSQL (usado quando `DATABASE_URL` está configurada)
 
 ## 🔧 Tecnologias Utilizadas
 
 - **Streamlit**: Framework web Python
-- **SQLite**: Banco de dados local
+- **SQLite**: Banco local (desenvolvimento)
+- **PostgreSQL**: Banco na nuvem (Neon/Supabase) para dados persistentes no Streamlit Cloud
 - **Pandas**: Manipulação e visualização de dados
 
 ## 📄 Licença
