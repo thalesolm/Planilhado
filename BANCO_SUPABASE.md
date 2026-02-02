@@ -34,6 +34,26 @@ sslmode = "require"
 
 (O `username` no pooler é `postgres` + ponto + o **Reference ID** do projeto, ex.: `postgres.skixkjbtqynxrsjtyjez`.)
 
+### Se ainda não conectar: use só `DATABASE_URL`
+
+Às vezes o formato `[connections.postgresql]` não é lido corretamente. Nesse caso use **apenas** a variável `DATABASE_URL`:
+
+1. No Supabase: **Project Settings** → **Database** → **Connection string** → **URI** → modo **Transaction**.
+2. Clique em **Copy** para copiar a URL completa.
+3. Nos Secrets do Streamlit, **apague** o bloco `[connections.postgresql]` e deixe só:
+
+```toml
+DATABASE_URL = "cole_aqui_a_url_que_voce_copiou_do_supabase"
+```
+
+Exemplo (com sua região e projeto):
+
+```toml
+DATABASE_URL = "postgresql://postgres.skixkjbtqynxrsjtyjez:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
+```
+
+**Importante:** se a senha tiver caracteres especiais (como `#`, `!`, `^`), use a URL que o próprio Supabase gera ao clicar em Copy – ela já vem com a senha codificada.
+
 ---
 
 ## Você precisa criar as tabelas manualmente?

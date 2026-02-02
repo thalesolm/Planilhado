@@ -50,16 +50,33 @@ def _get_database_url() -> Optional[str]:
 
             # 2) Formato [connections.postgresql] (conexão nativa do Streamlit)
             conn = None
-            if hasattr(st.secrets, "connections") and hasattr(st.secrets.connections, "postgresql"):
-                conn = st.secrets.connections.postgresql
-            elif "connections" in st.secrets and "postgresql" in st.secrets["connections"]:
-                conn = st.secrets["connections"]["postgresql"]
+            try:
+                if hasattr(st.secrets, "connections") and hasattr(st.secrets.connections, "postgresql"):
+                    conn = st.secrets.connections.postgresql
+                if conn is None and "connections" in st.secrets:
+                    conn = st.secrets["connections"].get("postgresql") if hasattr(st.secrets["connections"], "get") else st.secrets["connections"]["postgresql"]
+            except Exception:
+                conn = None
+
             if conn is not None:
                 keys = ("host", "port", "database", "username", "password", "sslmode")
-                if isinstance(conn, dict):
-                    c = {k: conn.get(k) for k in keys}
-                else:
-                    c = {k: getattr(conn, k, None) for k in keys}
+                c = {}
+                # Converter para dict se for outro tipo (Streamlit usa objeto tipo AttrDict)
+                try:
+                    if hasattr(conn, "__iter__") and not isinstance(conn, (str, bytes)):
+                        conn = dict(conn) if not isinstance(conn, dict) else conn
+                except Exception:
+                    pass
+                for k in keys:
+                    try:
+                        if isinstance(conn, dict):
+                            c[k] = conn.get(k)
+                        elif hasattr(conn, "keys") and k in conn.keys():
+                            c[k] = conn[k]
+                        else:
+                            c[k] = getattr(conn, k, None)
+                    except Exception:
+                        c[k] = None
                 if c.get("host"):
                     return _build_url_from_connection(c)
     except Exception:
@@ -79,7 +96,14 @@ def get_engine():
 
     if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
         try:
-            _engine = create_engine(url, pool_pre_ping=True, pool_size=1, max_overflow=0)
+            # connect_args garante SSL para Supabase/pooler
+            _engine = create_engine(
+                url,
+                pool_pre_ping=True,
+                pool_size=1,
+                max_overflow=0,
+                connect_args={"sslmode": "require"} if "sslmode" not in url else {},
+            )
             with _engine.connect() as test_conn:
                 test_conn.execute(text("SELECT 1"))
             _postgres_failed = False
