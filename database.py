@@ -1,10 +1,12 @@
 """
 Camada de banco de dados com suporte a SQLite (local) e PostgreSQL (Streamlit Cloud).
-Quando DATABASE_URL estiver configurada nos secrets ou variável de ambiente, usa PostgreSQL.
-Caso contrário, usa SQLite em data/planilhado.db (dados locais apenas; no Cloud se perdem ao dormir).
+Aceita:
+  - DATABASE_URL (string única) nos secrets ou variável de ambiente
+  - [connections.postgresql] no formato nativo do Streamlit (host, port, database, username, password, sslmode)
 """
 import os
 from typing import List, Optional, Tuple
+from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine, text
 
@@ -15,30 +17,53 @@ SQLITE_URL = f"sqlite:///{DB_PATH}"
 _engine = None
 
 
+def _build_url_from_connection(c) -> str:
+    """Monta URL PostgreSQL a partir do bloco [connections.postgresql]."""
+    host = c.get("host") or ""
+    port = c.get("port")
+    port = int(port) if port is not None else 5432
+    database = c.get("database") or "postgres"
+    username = c.get("username") or "postgres"
+    password = c.get("password") or ""
+    sslmode = c.get("sslmode") or "require"
+    # Senha pode ter caracteres especiais; precisa ser codificada na URL
+    password_encoded = quote_plus(password) if password else ""
+    return f"postgresql://{username}:{password_encoded}@{host}:{port}/{database}?sslmode={sslmode}"
+
+
 def _get_database_url() -> Optional[str]:
-    """Obtém DATABASE_URL dos secrets do Streamlit ou variável de ambiente."""
-    # 1) Secrets do Streamlit (Cloud ou .streamlit/secrets.toml)
+    """Obtém URL do PostgreSQL: DATABASE_URL ou monta a partir de [connections.postgresql]."""
+    # 1) DATABASE_URL (string única) nos secrets
     try:
         import streamlit as st
         if hasattr(st, "secrets") and st.secrets is not None:
-            # Acesso por atributo (comum no Streamlit Cloud)
+            url = None
             if hasattr(st.secrets, "DATABASE_URL"):
-                url = st.secrets.DATABASE_URL
-                if url:
-                    return str(url).strip()
-            # Acesso por chave
-            if "DATABASE_URL" in st.secrets:
+                url = getattr(st.secrets, "DATABASE_URL", None)
+            if not url and "DATABASE_URL" in st.secrets:
                 url = st.secrets["DATABASE_URL"]
-                if url:
-                    return str(url).strip()
-            # Acesso por .get() se existir
-            if hasattr(st.secrets, "get"):
+            if not url and hasattr(st.secrets, "get"):
                 url = st.secrets.get("DATABASE_URL")
-                if url:
-                    return str(url).strip()
+            if url:
+                return str(url).strip()
+
+            # 2) Formato [connections.postgresql] (conexão nativa do Streamlit)
+            conn = None
+            if hasattr(st.secrets, "connections") and hasattr(st.secrets.connections, "postgresql"):
+                conn = st.secrets.connections.postgresql
+            elif "connections" in st.secrets and "postgresql" in st.secrets["connections"]:
+                conn = st.secrets["connections"]["postgresql"]
+            if conn is not None:
+                keys = ("host", "port", "database", "username", "password", "sslmode")
+                if isinstance(conn, dict):
+                    c = {k: conn.get(k) for k in keys}
+                else:
+                    c = {k: getattr(conn, k, None) for k in keys}
+                if c.get("host"):
+                    return _build_url_from_connection(c)
     except Exception:
         pass
-    # 2) Variável de ambiente
+    # 3) Variável de ambiente
     url = os.environ.get("DATABASE_URL", "").strip()
     return url if url else None
 
