@@ -1,9 +1,10 @@
 import streamlit as st
 from datetime import time
+import os
+
 import database
 import validators
-import visualizations
-import os
+import viz
 
 # Configuração da página
 st.set_page_config(
@@ -445,7 +446,7 @@ def main():
         st.info("💀📝 Nenhuma hunt cadastrada ainda. Use o formulário na barra lateral para adicionar uma nova hunt. 📝💀")
     else:
         # Agrupar por respawn
-        hunts_por_respawn = visualizations.agrupar_hunts_por_respawn(todas_hunts)
+        hunts_por_respawn = viz.agrupar_hunts_por_respawn(todas_hunts)
         
         # Ordenar respawns alfabeticamente
         respawns_ordenados = sorted(hunts_por_respawn.keys())
@@ -453,7 +454,7 @@ def main():
         # Exibir quadro para cada respawn
         for respawn in respawns_ordenados:
             hunts = hunts_por_respawn[respawn]
-            df = visualizations.gerar_quadro_respawn(respawn, hunts)
+            df = viz.gerar_quadro_respawn(respawn, hunts)
             
             # Usar expander para cada respawn
             with st.expander(f"💀🔥 **{respawn}** 🔥💀 ({len(hunts)} hunt{'s' if len(hunts) > 1 else ''})", expanded=True):

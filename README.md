@@ -166,7 +166,7 @@ Planilhado/
 ├── app.py                 # Aplicativo principal Streamlit
 ├── database.py            # Funções de banco (SQLite local / PostgreSQL Cloud)
 ├── validators.py          # Validação de overlaps e regras de negócio
-├── visualizations.py      # Funções para gerar os quadros de visualização
+├── viz.py                 # Funções para gerar os quadros de visualização
 ├── requirements.txt       # Dependências do projeto
 ├── .streamlit/
 │   ├── config.toml        # Configurações do Streamlit (tema dark)
