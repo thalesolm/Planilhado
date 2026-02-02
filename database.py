@@ -17,6 +17,7 @@ SQLITE_URL = f"sqlite:///{DB_PATH}"
 
 _engine = None
 _postgres_failed = False  # True quando PostgreSQL falhou e usamos SQLite
+_postgres_error_message = ""  # Mensagem do último erro (para exibir ao usuário)
 
 
 def _normalize_postgres_url(url: str) -> str:
@@ -125,7 +126,7 @@ def _get_database_url() -> Optional[str]:
 
 def get_engine():
     """Retorna o engine SQLAlchemy (SQLite ou PostgreSQL). Se PostgreSQL falhar, usa SQLite."""
-    global _engine, _postgres_failed
+    global _engine, _postgres_failed, _postgres_error_message
     if _engine is not None:
         return _engine
 
@@ -135,7 +136,6 @@ def get_engine():
 
     if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
         try:
-            # connect_args garante SSL para Supabase/pooler
             _engine = create_engine(
                 url,
                 pool_pre_ping=True,
@@ -146,7 +146,9 @@ def get_engine():
             with _engine.connect() as test_conn:
                 test_conn.execute(text("SELECT 1"))
             _postgres_failed = False
-        except Exception:
+            _postgres_error_message = ""
+        except Exception as e:
+            _postgres_error_message = str(e).strip() or type(e).__name__
             _engine = None
             _postgres_failed = True
             os.makedirs("data", exist_ok=True)
@@ -155,6 +157,7 @@ def get_engine():
         os.makedirs("data", exist_ok=True)
         _engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
         _postgres_failed = False
+        _postgres_error_message = ""
 
     return _engine
 
@@ -177,6 +180,11 @@ def get_connection_status() -> str:
 def postgres_failed() -> bool:
     """Retorna True se a conexão PostgreSQL falhou e estamos em SQLite por fallback."""
     return _postgres_failed
+
+
+def get_postgres_error_message() -> str:
+    """Retorna a mensagem do último erro de conexão PostgreSQL (vazio se não houver)."""
+    return _postgres_error_message
 
 
 def init_db():

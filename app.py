@@ -265,9 +265,13 @@ def main():
         st.caption(f"🗄️ Banco: {status}")
         if database.postgres_failed():
             st.warning(
-                "PostgreSQL falhou; usando SQLite (dados podem sumir quando o app dormir). "
-                "Use o **Connection pooler** do Supabase (porta 6543) nos Secrets."
+                "PostgreSQL falhou; usando SQLite (dados podem sumir quando o app dormir)."
             )
+            err = database.get_postgres_error_message()
+            if err:
+                with st.expander("Ver detalhe do erro da conexão", expanded=False):
+                    st.code(err, language=None)
+                st.caption("Confira: senha no Secrets = senha do banco no Supabase; uso do pooler (porta 6543).")
 
     # Título com ícones malvadões
     st.markdown("""
