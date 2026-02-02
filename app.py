@@ -263,6 +263,11 @@ def main():
     # Indicador de banco (confirma que a conexão foi executada)
     with st.sidebar:
         st.caption(f"🗄️ Banco: {status}")
+        if database.postgres_failed():
+            st.warning(
+                "PostgreSQL falhou; usando SQLite (dados podem sumir quando o app dormir). "
+                "Use o **Connection pooler** do Supabase (porta 6543) nos Secrets."
+            )
 
     # Título com ícones malvadões
     st.markdown("""

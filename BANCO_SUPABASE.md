@@ -1,5 +1,41 @@
 # Instruções: banco no Supabase
 
+## Streamlit Cloud: use o Connection pooler (porta 6543)
+
+A conexão **direta** (porta 5432) costuma falhar no Streamlit Cloud com erro tipo *"Cannot assign requested address"*. Use o **Connection pooler** do Supabase:
+
+1. No Supabase: **Project Settings** → **Database**.
+2. Em **Connection string**, escolha **URI** e o modo **Transaction** (pooler).
+3. A URL será algo como:  
+   `postgresql://postgres.[PROJECT_REF]:[SENHA]@aws-0-[região].pooler.supabase.com:6543/postgres`
+4. Nos Secrets do Streamlit Cloud, use **uma** das opções:
+
+**Opção A – Uma única URL (recomendado)**  
+Crie no Secrets:
+
+```toml
+DATABASE_URL = "postgresql://postgres.SEU_PROJECT_REF:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
+```
+
+(Substitua `SEU_PROJECT_REF`, `SUA_SENHA` e a região pela URL que o Supabase mostrar.)
+
+**Opção B – Formato [connections.postgresql]**  
+Use o **host do pooler** e a porta **6543**:
+
+```toml
+[connections.postgresql]
+host = "aws-0-us-east-1.pooler.supabase.com"
+port = 6543
+database = "postgres"
+username = "postgres.SEU_PROJECT_REF"
+password = "SUA_SENHA"
+sslmode = "require"
+```
+
+(O `username` no pooler é `postgres` + ponto + o **Reference ID** do projeto, ex.: `postgres.skixkjbtqynxrsjtyjez`.)
+
+---
+
 ## Você precisa criar as tabelas manualmente?
 
 **Não.** Assim que você configurar a `DATABASE_URL` nos Secrets do Streamlit Cloud (com a connection string do Supabase) e o app rodar, ele **cria as tabelas sozinho** na primeira execução (`CREATE TABLE IF NOT EXISTS`). Não é necessário fazer deploy de nada nem rodar SQL à mão no Supabase antes.

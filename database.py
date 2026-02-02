@@ -15,6 +15,7 @@ DB_PATH = os.path.join("data", "planilhado.db")
 SQLITE_URL = f"sqlite:///{DB_PATH}"
 
 _engine = None
+_postgres_failed = False  # True quando PostgreSQL falhou e usamos SQLite
 
 
 def _build_url_from_connection(c) -> str:
@@ -69,35 +70,50 @@ def _get_database_url() -> Optional[str]:
 
 
 def get_engine():
-    """Retorna o engine SQLAlchemy (SQLite ou PostgreSQL)."""
-    global _engine
+    """Retorna o engine SQLAlchemy (SQLite ou PostgreSQL). Se PostgreSQL falhar, usa SQLite."""
+    global _engine, _postgres_failed
     if _engine is not None:
         return _engine
 
     url = _get_database_url()
 
-    # PostgreSQL: usa a URL diretamente (ex: postgresql://user:pass@host:5432/dbname)
     if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
-        _engine = create_engine(url, pool_pre_ping=True, pool_size=1, max_overflow=0)
+        try:
+            _engine = create_engine(url, pool_pre_ping=True, pool_size=1, max_overflow=0)
+            with _engine.connect() as test_conn:
+                test_conn.execute(text("SELECT 1"))
+            _postgres_failed = False
+        except Exception:
+            _engine = None
+            _postgres_failed = True
+            os.makedirs("data", exist_ok=True)
+            _engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
     else:
-        # SQLite local
         os.makedirs("data", exist_ok=True)
         _engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+        _postgres_failed = False
 
     return _engine
 
 
 def get_connection_status() -> str:
     """Retorna uma string indicando qual banco está em uso (para debug/confirmação)."""
+    global _postgres_failed
     try:
         engine = get_engine()
+        if _postgres_failed:
+            return "SQLite (fallback: PostgreSQL falhou)"
         url_str = str(engine.url)
         if "postgresql" in url_str or "postgres" in url_str:
-            # Não expor a URL completa por segurança
             return "PostgreSQL (nuvem)"
         return "SQLite (local)"
     except Exception as e:
         return f"Erro: {e}"
+
+
+def postgres_failed() -> bool:
+    """Retorna True se a conexão PostgreSQL falhou e estamos em SQLite por fallback."""
+    return _postgres_failed
 
 
 def init_db():
