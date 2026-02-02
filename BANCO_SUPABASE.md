@@ -52,7 +52,7 @@ Exemplo (com sua região e projeto):
 DATABASE_URL = "postgresql://postgres.skixkjbtqynxrsjtyjez:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ```
 
-**Importante:** se a senha tiver caracteres especiais (como `#`, `!`, `^`), use a URL que o próprio Supabase gera ao clicar em Copy – ela já vem com a senha codificada.
+**Importante:** o app codifica a senha automaticamente na URL. Se a senha tiver `#`, `!`, `^`, pode colar a URL com a senha em texto puro que a conexão será ajustada.
 
 ---
 

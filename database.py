@@ -5,8 +5,9 @@ Aceita:
   - [connections.postgresql] no formato nativo do Streamlit (host, port, database, username, password, sslmode)
 """
 import os
+import re
 from typing import List, Optional, Tuple
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, unquote
 
 from sqlalchemy import create_engine, text
 
@@ -16,6 +17,42 @@ SQLITE_URL = f"sqlite:///{DB_PATH}"
 
 _engine = None
 _postgres_failed = False  # True quando PostgreSQL falhou e usamos SQLite
+
+
+def _normalize_postgres_url(url: str) -> str:
+    """
+    Corrige a URL do PostgreSQL quando a senha tem caracteres especiais (#, !, ^, etc).
+    Esses caracteres quebram a URL; re codificamos a senha para que a conexão funcione.
+    """
+    if not url or not url.strip().startswith(("postgresql://", "postgres://")):
+        return url
+    url = url.strip()
+    try:
+        # Encontra user:password@ (o @ que separa userinfo de host)
+        # Formato: postgresql://USER:PASSWORD@HOST:PORT/DB?params
+        match = re.match(r"(postgres(?:ql)?://)([^/]+)(/.*)", url, re.IGNORECASE)
+        if not match:
+            return url
+        prefix, userinfo_host, path = match.groups()
+        # userinfo_host = "user:password@host:port" ou "user:password@host"
+        at_idx = userinfo_host.rfind("@")
+        if at_idx == -1:
+            return url
+        userinfo = userinfo_host[:at_idx]  # user:password (password pode ter : e @)
+        host_part = userinfo_host[at_idx + 1 :]
+        # user:password - senha é tudo após o primeiro ":"
+        colon = userinfo.find(":")
+        if colon == -1:
+            return url
+        user = userinfo[:colon]
+        password = userinfo[colon + 1 :]
+        # Decodifica se já veio codificado, depois codifica de forma segura
+        password_decoded = unquote(password)
+        password_encoded = quote_plus(password_decoded)
+        new_url = f"{prefix}{user}:{password_encoded}@{host_part}{path}"
+        return new_url
+    except Exception:
+        return url
 
 
 def _build_url_from_connection(c) -> str:
@@ -93,6 +130,8 @@ def get_engine():
         return _engine
 
     url = _get_database_url()
+    if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
+        url = _normalize_postgres_url(url)  # codifica senha com #, !, ^ etc.
 
     if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
         try:
