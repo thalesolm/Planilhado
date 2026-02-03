@@ -222,6 +222,13 @@ def init_db():
                     data_requisicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """))
+            # Sincroniza a sequence com o maior id existente (evita erro ao inserir após cadastros manuais)
+            conn.execute(text("""
+                SELECT setval(pg_get_serial_sequence('hunts', 'id'), COALESCE((SELECT MAX(id) FROM hunts), 1))
+            """))
+            conn.execute(text("""
+                SELECT setval(pg_get_serial_sequence('requisicoes', 'id'), COALESCE((SELECT MAX(id) FROM requisicoes), 1))
+            """))
         else:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS hunts (

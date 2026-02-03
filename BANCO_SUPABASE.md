@@ -54,6 +54,27 @@ DATABASE_URL = "postgresql://postgres.skixkjbtqynxrsjtyjez:SUA_SENHA@aws-0-us-ea
 
 **Importante:** o app codifica a senha automaticamente na URL. Se a senha tiver `#`, `!`, `^`, pode colar a URL com a senha em texto puro que a conexão será ajustada.
 
+### Erro "Tenant or user not found"
+
+Esse erro do pooler significa que **usuário/tenant não foi reconhecido**. Quase sempre é uma destas causas:
+
+1. **Região errada** – O host tem a região (ex.: `aws-0-us-east-1`). Ela tem que ser **exatamente** a do seu projeto. Não use `us-east-1` se o Supabase mostrar outra (ex.: `us-west-1`).
+2. **Project ref errado** – O username é `postgres.PROJECT_REF`. O `PROJECT_REF` tem que ser o **Reference ID** do seu projeto (o mesmo que aparece na URL do projeto no dashboard).
+3. **URL montada à mão** – Evite digitar a URL. Use sempre a que o Supabase gera.
+
+**O que fazer:**
+
+1. No Supabase: **Project Settings** → **Database**.
+2. Em **Connection string**, escolha **URI** (não “Session”, use **Transaction** / pooler).
+3. **Clique em “Copy”** na connection string que aparecer (ela já vem com host, região, `postgres.PROJECT_REF` e porta 6543 corretos).
+4. Nos Secrets do Streamlit, apague o valor antigo de `DATABASE_URL` e cole **só** o que você copiou, entre aspas:
+   ```toml
+   DATABASE_URL = "postgresql://postgres.XXXXX:senha@aws-0-REGIAO.pooler.supabase.com:6543/postgres?sslmode=require"
+   ```
+5. Troque só a **senha** na URL se você tiver alterado a senha do banco no Supabase (em **Database password**). O resto (host, região, `postgres.XXXXX`) deve permanecer como no “Copy”.
+
+Assim a região e o project ref ficam sempre corretos e o “Tenant or user not found” tende a sumir.
+
 ---
 
 ## Você precisa criar as tabelas manualmente?
