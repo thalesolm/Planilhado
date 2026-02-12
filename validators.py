@@ -25,14 +25,21 @@ def verificar_overlap(respawn: str, horario_inicio: str, horario_fim: str,
     # Converter horários para minutos para facilitar comparação
     inicio_minutos = _horario_para_minutos(horario_inicio)
     fim_minutos = _horario_para_minutos(horario_fim)
+    segmentos_novo = _segmentos_intervalo(inicio_minutos, fim_minutos)
     
+    def _tem_overlap_segmentos(seg_a, seg_b) -> bool:
+        for (a1, a2) in seg_a:
+            for (b1, b2) in seg_b:
+                if _segmentos_se_sobrepoem(a1, a2, b1, b2):
+                    return True
+        return False
+
     # Verificar overlap com cada hunt existente
     for hunt_id, h_inicio, h_fim in hunts_existentes:
         h_inicio_min = _horario_para_minutos(h_inicio)
         h_fim_min = _horario_para_minutos(h_fim)
-        
-        # Dois intervalos [A1, A2] e [B1, B2] se sobrepõem se: A1 < B2 AND A2 > B1
-        if inicio_minutos < h_fim_min and fim_minutos > h_inicio_min:
+        segmentos_existente = _segmentos_intervalo(h_inicio_min, h_fim_min)
+        if _tem_overlap_segmentos(segmentos_novo, segmentos_existente):
             mensagem = f"Conflito de horário! Já existe uma hunt cadastrada das {h_inicio} às {h_fim}."
             return True, mensagem
     
@@ -43,8 +50,8 @@ def verificar_overlap(respawn: str, horario_inicio: str, horario_fim: str,
         for req_id, h_inicio, h_fim in requisicoes_existentes:
             h_inicio_min = _horario_para_minutos(h_inicio)
             h_fim_min = _horario_para_minutos(h_fim)
-            
-            if inicio_minutos < h_fim_min and fim_minutos > h_inicio_min:
+            segmentos_existente = _segmentos_intervalo(h_inicio_min, h_fim_min)
+            if _tem_overlap_segmentos(segmentos_novo, segmentos_existente):
                 mensagem = f"Conflito de horário! Já existe uma requisição pendente das {h_inicio} às {h_fim}."
                 return True, mensagem
     
@@ -57,9 +64,29 @@ def _horario_para_minutos(horario: str) -> int:
     return horas * 60 + minutos
 
 
+MINUTOS_POR_DIA = 24 * 60  # 1440
+
+
+def _segmentos_intervalo(inicio_min: int, fim_min: int):
+    """
+    Retorna os segmentos [início, fim] em minutos que o intervalo cobre.
+    Se o intervalo cruza meia-noite (fim <= início), retorna dois segmentos.
+    """
+    if inicio_min < fim_min:
+        return [(inicio_min, fim_min)]
+    # Cruza meia-noite: [inicio_min, 24h) e [0, fim_min]
+    return [(inicio_min, MINUTOS_POR_DIA), (0, fim_min)]
+
+
+def _segmentos_se_sobrepoem(a1: int, a2: int, b1: int, b2: int) -> bool:
+    """Verifica se os segmentos [a1, a2] e [b1, b2] se sobrepõem."""
+    return a1 < b2 and a2 > b1
+
+
 def validar_horarios(horario_inicio: str, horario_fim: str) -> Tuple[bool, Optional[str]]:
     """
-    Valida se o horário final é maior que o inicial.
+    Valida os horários. Aceita intervalo no mesmo dia (fim > início) ou que cruza
+    a meia-noite (fim <= início, ex.: 23:00 às 02:00). Rejeita apenas se forem iguais.
     
     Returns:
         Tupla (valido, mensagem_erro)
@@ -67,7 +94,8 @@ def validar_horarios(horario_inicio: str, horario_fim: str) -> Tuple[bool, Optio
     inicio_minutos = _horario_para_minutos(horario_inicio)
     fim_minutos = _horario_para_minutos(horario_fim)
     
-    if fim_minutos <= inicio_minutos:
-        return False, "O horário final deve ser maior que o horário inicial."
+    # Rejeitar apenas se início e fim forem iguais (duração zero)
+    if inicio_minutos == fim_minutos:
+        return False, "O horário final deve ser diferente do horário inicial."
     
     return True, None

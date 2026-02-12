@@ -125,7 +125,7 @@ O aplicativo será aberto automaticamente no navegador em `http://localhost:8501
 3. Clique em "Salvar Hunt"
 
 4. O sistema irá:
-   - Validar se o horário final é maior que o inicial
+   - Validar horários (aceita intervalo no mesmo dia ou que cruza a meia-noite, ex.: 23:00 às 02:00)
    - Verificar se há conflito de horário com outras hunts do mesmo respawn
    - Salvar a hunt se tudo estiver válido
 
