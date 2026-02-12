@@ -85,17 +85,10 @@ def _segmentos_se_sobrepoem(a1: int, a2: int, b1: int, b2: int) -> bool:
 
 def validar_horarios(horario_inicio: str, horario_fim: str) -> Tuple[bool, Optional[str]]:
     """
-    Valida os horários. Aceita intervalo no mesmo dia (fim > início) ou que cruza
-    a meia-noite (fim <= início, ex.: 23:00 às 02:00). Rejeita apenas se forem iguais.
+    Valida os horários. Não há restrição de ordem: o horário final pode ser menor
+    que o inicial (ex.: 23:00 às 02:00). Conflitos são tratados apenas em verificar_overlap.
     
     Returns:
         Tupla (valido, mensagem_erro)
     """
-    inicio_minutos = _horario_para_minutos(horario_inicio)
-    fim_minutos = _horario_para_minutos(horario_fim)
-    
-    # Rejeitar apenas se início e fim forem iguais (duração zero)
-    if inicio_minutos == fim_minutos:
-        return False, "O horário final deve ser diferente do horário inicial."
-    
     return True, None
