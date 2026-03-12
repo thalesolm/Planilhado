@@ -8,3 +8,5 @@ base = "dark"
 
 [server]
 headless = true
+# Evita "inotify watch limit reached" no Streamlit Cloud (Linux)
+fileWatcherType = "none"
