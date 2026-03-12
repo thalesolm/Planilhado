@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS hunts (
     integrante3 VARCHAR(255),
     integrante4 VARCHAR(255),
     integrante5 VARCHAR(255),
+    dias_semana VARCHAR(50),
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -121,6 +122,7 @@ CREATE TABLE IF NOT EXISTS requisicoes (
     integrante3 VARCHAR(255),
     integrante4 VARCHAR(255),
     integrante5 VARCHAR(255),
+    dias_semana VARCHAR(50),
     data_requisicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -142,6 +144,7 @@ CREATE TABLE IF NOT EXISTS requisicoes (
 | `integrante3`   | VARCHAR(255)| não         | Nome do integrante 3               |
 | `integrante4`   | VARCHAR(255)| não         | Nome do integrante 4               |
 | `integrante5`   | VARCHAR(255)| não         | Nome do integrante 5               |
+| `dias_semana`   | VARCHAR(50) | não         | Dias da semana (ex: 1,2,3,4,5 = Seg–Sex; 0=Dom … 6=Sab) |
 | `data_cadastro` | TIMESTAMP   | não         | Data/hora do cadastro (default: agora) |
 
 ### Tabela `requisicoes`
@@ -157,7 +160,30 @@ CREATE TABLE IF NOT EXISTS requisicoes (
 | `integrante3`    | VARCHAR(255)| não         | Nome do integrante 3               |
 | `integrante4`    | VARCHAR(255)| não         | Nome do integrante 4               |
 | `integrante5`    | VARCHAR(255)| não         | Nome do integrante 5               |
+| `dias_semana`    | VARCHAR(50) | não         | Dias da semana (ex: 1,2,3,4,5 = Seg–Sex; 0=Dom … 6=Sab) |
 | `data_requisicao`| TIMESTAMP   | não         | Data/hora da requisição (default: agora) |
+
+---
+
+## Como adicionar a coluna `dias_semana` no Supabase (banco já existente)
+
+Se você **já tinha** as tabelas `hunts` e `requisicoes` no Supabase **antes** dessa atualização do app, o app tenta adicionar a coluna `dias_semana` sozinho na primeira execução. Se por algum motivo isso não acontecer (ou você quiser fazer manualmente), siga estes passos:
+
+1. Acesse o [Supabase](https://supabase.com) e abra seu projeto.
+2. No menu lateral, abra **SQL Editor**.
+3. Cole o SQL abaixo e clique em **Run**:
+
+```sql
+-- Adiciona a coluna dias_semana na tabela hunts (se ainda não existir)
+ALTER TABLE hunts ADD COLUMN IF NOT EXISTS dias_semana VARCHAR(50);
+
+-- Adiciona a coluna dias_semana na tabela requisicoes (se ainda não existir)
+ALTER TABLE requisicoes ADD COLUMN IF NOT EXISTS dias_semana VARCHAR(50);
+```
+
+4. Pronto. Registros antigos ficarão com `dias_semana` em branco (NULL); novos cadastros passarão a preencher normalmente.
+
+**Formato do valor em `dias_semana`:** números separados por vírgula, onde 0 = Domingo, 1 = Segunda, …, 6 = Sábado. Exemplos: `1,2,3,4,5` (Seg–Sex), `0,6` (Sáb–Dom), `0,1,2,3,4,5,6` (semana toda).
 
 ---
 

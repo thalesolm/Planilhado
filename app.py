@@ -6,6 +6,60 @@ import database
 import validators
 import viz
 
+# Índices dos dias: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+DIAS_IDS = list(range(7))
+DIAS_NOMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+
+
+def _obter_dias_selecionados(key_prefix: str) -> str:
+    """Lê os checkboxes de dias e retorna string no formato '0,1,2,3,4,5,6'."""
+    selecionados = []
+    for i in DIAS_IDS:
+        if st.session_state.get(key_prefix + f"_dias_{i}", False):
+            selecionados.append(str(i))
+    return ",".join(selecionados) if selecionados else None
+
+
+def widget_dias_semana(key_prefix: str) -> str:
+    """
+    Renderiza atalhos (Semana toda, Seg-Sex, Sab-Dom) e checkboxes por dia.
+    key_prefix diferencia formulário de requisição ('req_') do de hunt ('hunt_').
+    Retorna a string para salvar no banco (ex: '1,2,3,4,5') ou None.
+    """
+    # Inicializar com Seg-Sex na primeira vez
+    if not any(key_prefix + f"_dias_{i}" in st.session_state for i in DIAS_IDS):
+        for i in DIAS_IDS:
+            st.session_state[key_prefix + f"_dias_{i}"] = (i in [1, 2, 3, 4, 5])
+
+    st.markdown("#### 📅 Dias da semana 📅")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Semana toda", key=key_prefix + "_btn_semana", use_container_width=True):
+            for i in DIAS_IDS:
+                st.session_state[key_prefix + f"_dias_{i}"] = True
+            st.rerun()
+    with col2:
+        if st.button("Seg - Sex", key=key_prefix + "_btn_segsex", use_container_width=True):
+            for i in DIAS_IDS:
+                st.session_state[key_prefix + f"_dias_{i}"] = i in [1, 2, 3, 4, 5]
+            st.rerun()
+    with col3:
+        if st.button("Sab - Dom", key=key_prefix + "_btn_sabdom", use_container_width=True):
+            for i in DIAS_IDS:
+                st.session_state[key_prefix + f"_dias_{i}"] = i in [0, 6]
+            st.rerun()
+
+    cols = st.columns(7)
+    for i, nome in enumerate(DIAS_NOMES):
+        with cols[i]:
+            st.checkbox(
+                nome[:3],
+                key=key_prefix + f"_dias_{i}",
+                help=nome,
+            )
+
+    return _obter_dias_selecionados(key_prefix)
+
 # Configuração da página
 st.set_page_config(
     page_title="Planilhado de Hunts - Carreta Encore",
@@ -112,6 +166,8 @@ def mostrar_requisicao_interface():
         value=time(18, 0),
         key="req_horario_fim"
     )
+
+    widget_dias_semana("req_")
     
     # Integrantes
     st.markdown("#### 💀👥 Integrantes da Party 👥💀")
@@ -140,16 +196,10 @@ def mostrar_requisicao_interface():
             st.error(f"💀⚠️ {mensagem_erro} ⚠️💀")
             return
         
-        # Verificar overlaps (incluindo requisições pendentes)
-        tem_overlap, mensagem_overlap = validators.verificar_overlap(
-            respawn.strip(), horario_inicio_str, horario_fim_str,
-            verificar_requisicoes=True
-        )
-        if tem_overlap:
-            st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
-            return
-        
+        # Overlap permitido: não verificamos mais conflito de horário.
+
         # Salvar requisição
+        dias_semana_str = _obter_dias_selecionados("req_")
         try:
             database.insert_requisicao(
                 respawn=respawn.strip(),
@@ -159,7 +209,8 @@ def mostrar_requisicao_interface():
                 integrante2=integrante2.strip() if integrante2 else None,
                 integrante3=integrante3.strip() if integrante3 else None,
                 integrante4=integrante4.strip() if integrante4 else None,
-                integrante5=integrante5.strip() if integrante5 else None
+                integrante5=integrante5.strip() if integrante5 else None,
+                dias_semana=dias_semana_str
             )
             st.success("💀🔥✅ Requisição enviada com sucesso! Aguarde aprovação do administrador. ✅🔥💀")
             st.session_state['mostrar_requisicao'] = False
@@ -206,37 +257,33 @@ def mostrar_aprovacao_requisicoes():
             
             st.write(f"**Respawn:** {respawn}")
             st.write(f"**Horário:** {horario_inicio} - {horario_fim}")
+            st.write(f"**Dias:** {viz.formatar_dias_semana(req[9] if len(req) > 9 else None)}")
             st.write(f"**Integrantes:** {integrantes_str}")
-            st.write(f"**Data da Requisição:** {req[9]}")
+            st.write(f"**Data da Requisição:** {req[10] if len(req) > 10 else req[9]}")
             
             col1, col2, col3 = st.columns([1, 1, 2])
             
             with col1:
                 if st.button(f"✅ Aceitar", key=f"accept_{req_id}", type="primary", use_container_width=True):
-                    # Verificar overlap antes de aceitar
-                    tem_overlap, mensagem_overlap = validators.verificar_overlap(
-                        respawn, horario_inicio, horario_fim,
-                        verificar_requisicoes=False  # Não verificar outras requisições
+                    # Overlap permitido: aceitar sem verificar conflito.
+                    # req: id, respawn, h_inicio, h_fim, i1..i5, dias_semana, data_requisicao
+                    dias_semana_req = req[9] if len(req) > 9 else None
+                    # Mover para hunts
+                    database.insert_hunt(
+                        respawn=respawn,
+                        horario_inicio=horario_inicio,
+                        horario_fim=horario_fim,
+                        integrante1=req[4] if len(req) > 4 else None,
+                        integrante2=req[5] if len(req) > 5 else None,
+                        integrante3=req[6] if len(req) > 6 else None,
+                        integrante4=req[7] if len(req) > 7 else None,
+                        integrante5=req[8] if len(req) > 8 else None,
+                        dias_semana=dias_semana_req
                     )
-                    
-                    if tem_overlap:
-                        st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
-                    else:
-                        # Mover para hunts
-                        database.insert_hunt(
-                            respawn=respawn,
-                            horario_inicio=horario_inicio,
-                            horario_fim=horario_fim,
-                            integrante1=req[4] if len(req) > 4 else None,
-                            integrante2=req[5] if len(req) > 5 else None,
-                            integrante3=req[6] if len(req) > 6 else None,
-                            integrante4=req[7] if len(req) > 7 else None,
-                            integrante5=req[8] if len(req) > 8 else None
-                        )
-                        # Deletar requisição
-                        database.delete_requisicao(req_id)
-                        st.success(f"💀🔥✅ Requisição ID {req_id} aceita e adicionada ao planilhado! ✅🔥💀")
-                        st.rerun()
+                    # Deletar requisição
+                    database.delete_requisicao(req_id)
+                    st.success(f"💀🔥✅ Requisição ID {req_id} aceita e adicionada ao planilhado! ✅🔥💀")
+                    st.rerun()
             
             with col2:
                 if st.button(f"❌ Rejeitar", key=f"reject_{req_id}", type="secondary", use_container_width=True):
@@ -245,7 +292,7 @@ def mostrar_aprovacao_requisicoes():
                     st.rerun()
             
             with col3:
-                st.caption("⚠️ Verifique overlaps antes de aceitar!")
+                st.caption("Overlaps de horário são permitidos.")
         
         st.markdown("---")
 
@@ -379,7 +426,9 @@ def main():
                 value=time(18, 0),
                 key="horario_fim"
             )
-            
+
+            widget_dias_semana("hunt_")
+
             # Integrantes
             st.markdown("#### 💀👥 Integrantes da Party 👥💀")
             integrante1 = st.text_input("Integrante 1", key="int1")
@@ -407,15 +456,10 @@ def main():
                     st.error(f"💀⚠️ {mensagem_erro} ⚠️💀")
                     return
                 
-                # Verificar overlaps
-                tem_overlap, mensagem_overlap = validators.verificar_overlap(
-                    respawn.strip(), horario_inicio_str, horario_fim_str
-                )
-                if tem_overlap:
-                    st.error(f"💀🔥⚠️ {mensagem_overlap} ⚠️🔥💀")
-                    return
-                
+                # Overlap permitido: não verificamos mais conflito de horário.
+
                 # Salvar no banco
+                dias_semana_str = _obter_dias_selecionados("hunt_")
                 try:
                     database.insert_hunt(
                         respawn=respawn.strip(),
@@ -425,7 +469,8 @@ def main():
                         integrante2=integrante2.strip() if integrante2 else None,
                         integrante3=integrante3.strip() if integrante3 else None,
                         integrante4=integrante4.strip() if integrante4 else None,
-                        integrante5=integrante5.strip() if integrante5 else None
+                        integrante5=integrante5.strip() if integrante5 else None,
+                        dias_semana=dias_semana_str
                     )
                     st.success("💀🔥✅ Hunt salva com sucesso! ✅🔥💀")
                     st.rerun()

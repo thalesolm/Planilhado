@@ -205,6 +205,7 @@ def init_db():
                     integrante3 VARCHAR(255),
                     integrante4 VARCHAR(255),
                     integrante5 VARCHAR(255),
+                    dias_semana VARCHAR(50),
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """))
@@ -219,6 +220,7 @@ def init_db():
                     integrante3 VARCHAR(255),
                     integrante4 VARCHAR(255),
                     integrante5 VARCHAR(255),
+                    dias_semana VARCHAR(50),
                     data_requisicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """))
@@ -241,6 +243,7 @@ def init_db():
                     integrante3 TEXT,
                     integrante4 TEXT,
                     integrante5 TEXT,
+                    dias_semana TEXT,
                     data_cadastro TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """))
@@ -255,9 +258,20 @@ def init_db():
                     integrante3 TEXT,
                     integrante4 TEXT,
                     integrante5 TEXT,
+                    dias_semana TEXT,
                     data_requisicao TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """))
+        # Migração: adicionar coluna dias_semana em tabelas já existentes (banco antigo)
+        try:
+            if is_postgres:
+                conn.execute(text("ALTER TABLE hunts ADD COLUMN IF NOT EXISTS dias_semana VARCHAR(50)"))
+                conn.execute(text("ALTER TABLE requisicoes ADD COLUMN IF NOT EXISTS dias_semana VARCHAR(50)"))
+            else:
+                conn.execute(text("ALTER TABLE hunts ADD COLUMN dias_semana TEXT"))
+                conn.execute(text("ALTER TABLE requisicoes ADD COLUMN dias_semana TEXT"))
+        except Exception:
+            pass  # Coluna já existe (criada pelo CREATE TABLE)
         conn.commit()
 
 
@@ -289,6 +303,7 @@ def insert_hunt(
     integrante3: Optional[str] = None,
     integrante4: Optional[str] = None,
     integrante5: Optional[str] = None,
+    dias_semana: Optional[str] = None,
 ) -> int:
     """Insere uma nova hunt. Retorna o ID inserido."""
     engine = get_engine()
@@ -298,9 +313,9 @@ def insert_hunt(
             r = conn.execute(
                 text("""
                     INSERT INTO hunts (respawn, horario_inicio, horario_fim,
-                        integrante1, integrante2, integrante3, integrante4, integrante5)
+                        integrante1, integrante2, integrante3, integrante4, integrante5, dias_semana)
                     VALUES (:respawn, :horario_inicio, :horario_fim,
-                        :i1, :i2, :i3, :i4, :i5)
+                        :i1, :i2, :i3, :i4, :i5, :dias_semana)
                     RETURNING id
                 """),
                 {
@@ -312,6 +327,7 @@ def insert_hunt(
                     "i3": integrante3,
                     "i4": integrante4,
                     "i5": integrante5,
+                    "dias_semana": dias_semana,
                 },
             )
             last_id = r.scalar()
@@ -319,9 +335,9 @@ def insert_hunt(
             r = conn.execute(
                 text("""
                     INSERT INTO hunts (respawn, horario_inicio, horario_fim,
-                        integrante1, integrante2, integrante3, integrante4, integrante5)
+                        integrante1, integrante2, integrante3, integrante4, integrante5, dias_semana)
                     VALUES (:respawn, :horario_inicio, :horario_fim,
-                        :i1, :i2, :i3, :i4, :i5)
+                        :i1, :i2, :i3, :i4, :i5, :dias_semana)
                 """),
                 {
                     "respawn": respawn,
@@ -332,6 +348,7 @@ def insert_hunt(
                     "i3": integrante3,
                     "i4": integrante4,
                     "i5": integrante5,
+                    "dias_semana": dias_semana,
                 },
             )
             last_id = r.lastrowid
@@ -347,7 +364,7 @@ def get_hunts_by_respawn(respawn: str) -> List[Tuple]:
             text("""
                 SELECT id, respawn, horario_inicio, horario_fim,
                     integrante1, integrante2, integrante3, integrante4, integrante5,
-                    data_cadastro
+                    dias_semana, data_cadastro
                 FROM hunts WHERE respawn = :respawn ORDER BY horario_inicio
             """),
             {"respawn": respawn},
@@ -363,7 +380,7 @@ def get_all_hunts() -> List[Tuple]:
         r = conn.execute(text("""
             SELECT id, respawn, horario_inicio, horario_fim,
                 integrante1, integrante2, integrante3, integrante4, integrante5,
-                data_cadastro
+                dias_semana, data_cadastro
             FROM hunts ORDER BY respawn, horario_inicio
         """))
         rows = r.fetchall()
@@ -412,6 +429,7 @@ def insert_requisicao(
     integrante3: Optional[str] = None,
     integrante4: Optional[str] = None,
     integrante5: Optional[str] = None,
+    dias_semana: Optional[str] = None,
 ) -> int:
     """Insere uma requisição. Retorna o ID inserido."""
     engine = get_engine()
@@ -421,9 +439,9 @@ def insert_requisicao(
             r = conn.execute(
                 text("""
                     INSERT INTO requisicoes (respawn, horario_inicio, horario_fim,
-                        integrante1, integrante2, integrante3, integrante4, integrante5)
+                        integrante1, integrante2, integrante3, integrante4, integrante5, dias_semana)
                     VALUES (:respawn, :horario_inicio, :horario_fim,
-                        :i1, :i2, :i3, :i4, :i5)
+                        :i1, :i2, :i3, :i4, :i5, :dias_semana)
                     RETURNING id
                 """),
                 {
@@ -435,6 +453,7 @@ def insert_requisicao(
                     "i3": integrante3,
                     "i4": integrante4,
                     "i5": integrante5,
+                    "dias_semana": dias_semana,
                 },
             )
             last_id = r.scalar()
@@ -442,9 +461,9 @@ def insert_requisicao(
             r = conn.execute(
                 text("""
                     INSERT INTO requisicoes (respawn, horario_inicio, horario_fim,
-                        integrante1, integrante2, integrante3, integrante4, integrante5)
+                        integrante1, integrante2, integrante3, integrante4, integrante5, dias_semana)
                     VALUES (:respawn, :horario_inicio, :horario_fim,
-                        :i1, :i2, :i3, :i4, :i5)
+                        :i1, :i2, :i3, :i4, :i5, :dias_semana)
                 """),
                 {
                     "respawn": respawn,
@@ -455,6 +474,7 @@ def insert_requisicao(
                     "i3": integrante3,
                     "i4": integrante4,
                     "i5": integrante5,
+                    "dias_semana": dias_semana,
                 },
             )
             last_id = r.lastrowid
@@ -469,7 +489,7 @@ def get_all_requisicoes() -> List[Tuple]:
         r = conn.execute(text("""
             SELECT id, respawn, horario_inicio, horario_fim,
                 integrante1, integrante2, integrante3, integrante4, integrante5,
-                data_requisicao
+                dias_semana, data_requisicao
             FROM requisicoes ORDER BY data_requisicao DESC
         """))
         rows = r.fetchall()
@@ -484,7 +504,7 @@ def get_requisicao_by_id(requisicao_id: int) -> Optional[Tuple]:
             text("""
                 SELECT id, respawn, horario_inicio, horario_fim,
                     integrante1, integrante2, integrante3, integrante4, integrante5,
-                    data_requisicao
+                    dias_semana, data_requisicao
                 FROM requisicoes WHERE id = :id
             """),
             {"id": requisicao_id},
