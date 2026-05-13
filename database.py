@@ -417,6 +417,69 @@ def delete_hunt(hunt_id: int) -> bool:
     return deleted
 
 
+def get_hunt_by_id(hunt_id: int) -> Optional[Tuple]:
+    """Retorna uma hunt pelo ID ou None se não existir."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(
+            text("""
+                SELECT id, respawn, horario_inicio, horario_fim,
+                    integrante1, integrante2, integrante3, integrante4, integrante5,
+                    dias_semana, data_cadastro
+                FROM hunts WHERE id = :id
+            """),
+            {"id": hunt_id},
+        )
+        row = r.fetchone()
+    return _row_to_tuple(row) if row else None
+
+
+def update_hunt(
+    hunt_id: int,
+    respawn: str,
+    horario_inicio: str,
+    horario_fim: str,
+    integrante1: Optional[str] = None,
+    integrante2: Optional[str] = None,
+    integrante3: Optional[str] = None,
+    integrante4: Optional[str] = None,
+    integrante5: Optional[str] = None,
+    dias_semana: Optional[str] = None,
+) -> bool:
+    """Atualiza uma hunt existente. Retorna True se alguma linha foi alterada."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        r = conn.execute(
+            text("""
+                UPDATE hunts SET
+                    respawn = :respawn,
+                    horario_inicio = :horario_inicio,
+                    horario_fim = :horario_fim,
+                    integrante1 = :i1,
+                    integrante2 = :i2,
+                    integrante3 = :i3,
+                    integrante4 = :i4,
+                    integrante5 = :i5,
+                    dias_semana = :dias_semana
+                WHERE id = :id
+            """),
+            {
+                "id": hunt_id,
+                "respawn": respawn,
+                "horario_inicio": horario_inicio,
+                "horario_fim": horario_fim,
+                "i1": integrante1,
+                "i2": integrante2,
+                "i3": integrante3,
+                "i4": integrante4,
+                "i5": integrante5,
+                "dias_semana": dias_semana,
+            },
+        )
+        conn.commit()
+        return r.rowcount > 0
+
+
 # ========== REQUISIÇÕES ==========
 
 

@@ -1,6 +1,7 @@
 import streamlit as st
-from datetime import time
+from datetime import datetime, time
 import os
+from typing import Optional
 
 import database
 import validators
@@ -9,6 +10,30 @@ import viz
 # Índices dos dias: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
 DIAS_IDS = list(range(7))
 DIAS_NOMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+
+
+def _parse_hhmm(horario_str: str) -> time:
+    """Converte 'HH:MM' em time."""
+    return datetime.strptime(horario_str.strip(), "%H:%M").time()
+
+
+def _preencher_dias_sessao(key_prefix: str, dias_semana_str: Optional[str]) -> None:
+    """Define os checkboxes de dias (session_state) a partir da string do banco."""
+    selected = set()
+    if dias_semana_str and dias_semana_str.strip():
+        try:
+            for part in dias_semana_str.split(","):
+                part = part.strip()
+                if part:
+                    selected.add(int(part))
+        except ValueError:
+            selected = set()
+    if not selected:
+        for i in DIAS_IDS:
+            st.session_state[key_prefix + f"_dias_{i}"] = i in [1, 2, 3, 4, 5]
+    else:
+        for i in DIAS_IDS:
+            st.session_state[key_prefix + f"_dias_{i}"] = i in selected
 
 
 def _obter_dias_selecionados(key_prefix: str) -> str:
@@ -518,15 +543,11 @@ def main():
                     hide_index=True
                 )
                 
-                # Se autenticado, mostrar opções de deletar
+                # Se autenticado, editar ou deletar hunts
                 if autenticado:
                     st.markdown("---")
-                    st.markdown("### 🔪🗑️ Deletar Hunts 🗑️🔪")
-                    
-                    # Criar um selectbox com as hunts para deletar
                     opcoes_hunts = []
                     for hunt in hunts:
-                        # hunt = (id, respawn, horario_inicio, horario_fim, integrante1, ..., integrante5, data_cadastro)
                         hunt_id = hunt[0]
                         horario_inicio = hunt[2]
                         horario_fim = hunt[3]
@@ -537,26 +558,158 @@ def main():
                         integrantes_str = ", ".join(integrantes) if integrantes else "Sem integrantes"
                         label = f"ID {hunt_id}: {horario_inicio} - {horario_fim} ({integrantes_str})"
                         opcoes_hunts.append((hunt_id, label))
-                    
+
                     if opcoes_hunts:
-                        hunt_selecionada = st.selectbox(
-                            "Selecione a hunt para deletar:",
-                            options=opcoes_hunts,
-                            format_func=lambda x: x[1],
-                            key=f"delete_select_{respawn}"
-                        )
-                        
-                        col1, col2 = st.columns([1, 4])
-                        with col1:
-                            if st.button("💀🗑️ Deletar 🗑️💀", type="secondary", key=f"delete_btn_{respawn}"):
-                                hunt_id_para_deletar = hunt_selecionada[0]
-                                if database.delete_hunt(hunt_id_para_deletar):
-                                    st.success(f"💀🔥✅ Hunt ID {hunt_id_para_deletar} deletada com sucesso! ✅🔥💀")
-                                    st.rerun()
+                        tab_editar, tab_deletar = st.tabs(["🔧 Editar hunt", "🗑️ Deletar hunt"])
+
+                        with tab_editar:
+                            hunt_para_editar = st.selectbox(
+                                "Selecione a hunt para editar:",
+                                options=opcoes_hunts,
+                                format_func=lambda x: x[1],
+                                key=f"edit_select_{respawn}",
+                            )
+                            hunt_id_ed = hunt_para_editar[0]
+                            hunt_atual = database.get_hunt_by_id(hunt_id_ed)
+                            if not hunt_atual:
+                                st.error("💀 Hunt não encontrada (pode ter sido removida). Recarregue a página. 💀")
+                            else:
+                                init_marker = f"edit_dias_loaded_{respawn}"
+                                if st.session_state.get(init_marker) != hunt_id_ed:
+                                    dias_db = hunt_atual[9] if len(hunt_atual) > 9 else None
+                                    _preencher_dias_sessao(f"edit_{hunt_id_ed}_", dias_db)
+                                    st.session_state[init_marker] = hunt_id_ed
+
+                                nome_rp_atual = hunt_atual[1]
+                                lista_rp = sorted({*database.get_respawns(), nome_rp_atual})
+                                opcoes_rp = ["Novo respawn"] + lista_rp
+                                idx_rp = opcoes_rp.index(nome_rp_atual) if nome_rp_atual in opcoes_rp else 0
+                                respawn_sel_ed = st.selectbox(
+                                    "Respawn",
+                                    options=opcoes_rp,
+                                    index=idx_rp,
+                                    key=f"edit_rp_sel_{respawn}_{hunt_id_ed}",
+                                )
+                                if respawn_sel_ed == "Novo respawn":
+                                    respawn_ed = st.text_input(
+                                        "Digite o nome do respawn",
+                                        value=nome_rp_atual,
+                                        key=f"edit_rp_txt_{respawn}_{hunt_id_ed}",
+                                        placeholder="Ex: Livraria de Energy",
+                                    )
                                 else:
-                                    st.error(f"💀❌ Erro ao deletar hunt ID {hunt_id_para_deletar} ❌💀")
-                        with col2:
-                            st.caption("🔥⚠️ Esta ação não pode ser desfeita! ⚠️🔥")
+                                    respawn_ed = respawn_sel_ed
+
+                                st.markdown("#### 🔥⏰ Horários ⏰🔥")
+                                hora_i_ed = st.time_input(
+                                    "Horário Inicial",
+                                    value=_parse_hhmm(hunt_atual[2]),
+                                    key=f"edit_hi_{respawn}_{hunt_id_ed}",
+                                )
+                                hora_f_ed = st.time_input(
+                                    "Horário Final",
+                                    value=_parse_hhmm(hunt_atual[3]),
+                                    key=f"edit_hf_{respawn}_{hunt_id_ed}",
+                                )
+
+                                widget_dias_semana(f"edit_{hunt_id_ed}_")
+
+                                st.markdown("#### 💀👥 Integrantes da Party 👥💀")
+                                int1_ed = st.text_input(
+                                    "Integrante 1",
+                                    value=hunt_atual[4] or "",
+                                    key=f"edit_i1_{respawn}_{hunt_id_ed}",
+                                )
+                                int2_ed = st.text_input(
+                                    "Integrante 2",
+                                    value=hunt_atual[5] or "",
+                                    key=f"edit_i2_{respawn}_{hunt_id_ed}",
+                                )
+                                int3_ed = st.text_input(
+                                    "Integrante 3",
+                                    value=hunt_atual[6] or "",
+                                    key=f"edit_i3_{respawn}_{hunt_id_ed}",
+                                )
+                                int4_ed = st.text_input(
+                                    "Integrante 4",
+                                    value=hunt_atual[7] or "",
+                                    key=f"edit_i4_{respawn}_{hunt_id_ed}",
+                                )
+                                int5_ed = st.text_input(
+                                    "Integrante 5",
+                                    value=hunt_atual[8] or "",
+                                    key=f"edit_i5_{respawn}_{hunt_id_ed}",
+                                )
+
+                                if st.button(
+                                    "💀🔥 Salvar alterações 🔥💀",
+                                    type="primary",
+                                    key=f"edit_save_{respawn}_{hunt_id_ed}",
+                                    use_container_width=True,
+                                ):
+                                    if not respawn_ed or not str(respawn_ed).strip():
+                                        st.error("💀⚠️ Preencha o campo Respawn. ⚠️💀")
+                                    else:
+                                        hi_str = hora_i_ed.strftime("%H:%M")
+                                        hf_str = hora_f_ed.strftime("%H:%M")
+                                        valido, msg_erro = validators.validar_horarios(hi_str, hf_str)
+                                        if not valido:
+                                            st.error(f"💀⚠️ {msg_erro} ⚠️💀")
+                                        else:
+                                            dias_ed = _obter_dias_selecionados(f"edit_{hunt_id_ed}_")
+                                            try:
+                                                ok = database.update_hunt(
+                                                    hunt_id_ed,
+                                                    respawn=str(respawn_ed).strip(),
+                                                    horario_inicio=hi_str,
+                                                    horario_fim=hf_str,
+                                                    integrante1=int1_ed.strip() if int1_ed else None,
+                                                    integrante2=int2_ed.strip() if int2_ed else None,
+                                                    integrante3=int3_ed.strip() if int3_ed else None,
+                                                    integrante4=int4_ed.strip() if int4_ed else None,
+                                                    integrante5=int5_ed.strip() if int5_ed else None,
+                                                    dias_semana=dias_ed,
+                                                )
+                                                if ok:
+                                                    st.success(
+                                                        f"💀🔥✅ Hunt ID {hunt_id_ed} atualizada com sucesso! ✅🔥💀"
+                                                    )
+                                                    st.rerun()
+                                                else:
+                                                    st.error(
+                                                        f"💀❌ Não foi possível atualizar a hunt ID {hunt_id_ed}. ❌💀"
+                                                    )
+                                            except Exception as e:
+                                                st.error(f"💀❌ Erro ao salvar: {str(e)} ❌💀")
+
+                        with tab_deletar:
+                            st.markdown("### 🔪🗑️ Deletar hunt 🗑️🔪")
+                            hunt_selecionada = st.selectbox(
+                                "Selecione a hunt para deletar:",
+                                options=opcoes_hunts,
+                                format_func=lambda x: x[1],
+                                key=f"delete_select_{respawn}",
+                            )
+                            col1, col2 = st.columns([1, 4])
+                            with col1:
+                                if st.button(
+                                    "💀🗑️ Deletar 🗑️💀",
+                                    type="secondary",
+                                    key=f"delete_btn_{respawn}",
+                                ):
+                                    hunt_id_para_deletar = hunt_selecionada[0]
+                                    if database.delete_hunt(hunt_id_para_deletar):
+                                        st.success(
+                                            f"💀🔥✅ Hunt ID {hunt_id_para_deletar} deletada com sucesso! ✅🔥💀"
+                                        )
+                                        st.session_state.pop(f"edit_dias_loaded_{respawn}", None)
+                                        st.rerun()
+                                    else:
+                                        st.error(
+                                            f"💀❌ Erro ao deletar hunt ID {hunt_id_para_deletar} ❌💀"
+                                        )
+                            with col2:
+                                st.caption("🔥⚠️ Esta ação não pode ser desfeita! ⚠️🔥")
 
 
 if __name__ == "__main__":
