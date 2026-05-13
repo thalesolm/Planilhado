@@ -87,7 +87,7 @@ def widget_dias_semana(key_prefix: str) -> str:
 
 # Configuração da página
 st.set_page_config(
-    page_title="Planilhado de Hunts - Carreta Encore",
+    page_title="Planilhado de Hunts - Jadebraland Encore",
     page_icon="💀",
     layout="wide"
 )
@@ -349,7 +349,7 @@ def main():
     st.markdown("""
     <div style='text-align: center; margin-bottom: 20px;'>
         <h1 style='color: #FF4B4B; font-size: 2.5em; margin-bottom: 10px; white-space: nowrap;'>
-            💀💀💀 Planilhado de Hunts - Carreta Encore 💀💀💀
+            💀💀💀 Planilhado de Hunts - Jadebraland Encore 💀💀💀
         </h1>
     </div>
     """, unsafe_allow_html=True)
